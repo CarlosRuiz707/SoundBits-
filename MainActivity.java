@@ -1,6 +1,6 @@
 package app.tunebox;
 import android.app.Activity;import android.content.*;import android.database.Cursor;import android.content.res.AssetFileDescriptor;
-import android.net.Uri;import android.os.*;import android.provider.MediaStore;import android.webkit.*;
+import android.graphics.Bitmap;import android.media.AudioManager;import android.media.MediaMetadataRetriever;import android.util.Size;import java.net.*;import android.net.Uri;import android.os.*;import android.provider.MediaStore;import android.webkit.*;
 import org.json.*;import java.io.*;import java.util.*;
 public class MainActivity extends Activity {
   WebView w; ValueCallback<Uri[]> cb;
@@ -14,6 +14,35 @@ public class MainActivity extends Activity {
       public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
         Uri u = r.getUrl();
         if (!"tb.local".equals(u.getHost())) return null;
+        String path = u.getPath() == null ? "" : u.getPath();
+        Map<String, String> hd = new HashMap<>(); hd.put("Access-Control-Allow-Origin", "*");
+        if (path.equals("/q")) {
+          try {
+            HttpURLConnection hc = (HttpURLConnection) new URL("https://itunes.apple.com/search?media=music&entity=song&limit=1&term=" + URLEncoder.encode(u.getQueryParameter("term"), "UTF-8")).openConnection();
+            hc.setConnectTimeout(8000); hc.setReadTimeout(8000);
+            return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, hc.getInputStream());
+          } catch (Exception e) { return new WebResourceResponse("application/json", "utf-8", 404, "Not Found", hd, new ByteArrayInputStream("{}".getBytes())); }
+        }
+        if (path.equals("/d")) {
+          try {
+            HttpURLConnection hc = (HttpURLConnection) new URL("https://api.deezer.com/search/artist?limit=1&q=" + URLEncoder.encode(u.getQueryParameter("q"), "UTF-8")).openConnection();
+            hc.setConnectTimeout(8000); hc.setReadTimeout(8000);
+            return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, hc.getInputStream());
+          } catch (Exception e) { return new WebResourceResponse("application/json", "utf-8", 404, "Not Found", hd, new ByteArrayInputStream("{}".getBytes())); }
+        }
+        if (path.startsWith("/c/")) {
+          byte[] art = null;
+          Uri cu = android.content.ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, Long.parseLong(u.getLastPathSegment()));
+          MediaMetadataRetriever mr = new MediaMetadataRetriever();
+          try { mr.setDataSource(MainActivity.this, cu); art = mr.getEmbeddedPicture(); } catch (Exception e) {}
+          try { mr.release(); } catch (Exception e) {}
+          if (art == null && Build.VERSION.SDK_INT >= 29) {
+            try { Bitmap bm = getContentResolver().loadThumbnail(cu, new Size(512, 512), null); ByteArrayOutputStream bo = new ByteArrayOutputStream(); bm.compress(Bitmap.CompressFormat.JPEG, 85, bo); art = bo.toByteArray(); } catch (Exception e) {}
+          }
+          if (art == null) return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", hd, new ByteArrayInputStream(new byte[0]));
+          hd.put("Cache-Control", "max-age=86400");
+          return new WebResourceResponse("image/jpeg", null, 200, "OK", hd, new ByteArrayInputStream(art));
+        }
         try {
           Uri c = android.content.ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, Long.parseLong(u.getLastPathSegment()));
           AssetFileDescriptor fd = getContentResolver().openAssetFileDescriptor(c, "r");
@@ -50,15 +79,23 @@ public class MainActivity extends Activity {
     @JavascriptInterface public String scan() {
       JSONArray a = new JSONArray();
       try (Cursor c = getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-          new String[]{MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION},
+          Build.VERSION.SDK_INT >= 30 ? new String[]{MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION, "genre"} : new String[]{MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION},
           MediaStore.Audio.Media.IS_MUSIC + "!=0", null, MediaStore.Audio.Media.TITLE + " COLLATE NOCASE")) {
         while (c != null && c.moveToNext()) {
           JSONObject o = new JSONObject();
-          o.put("mid", c.getLong(0)); o.put("title", c.getString(1)); o.put("artist", c.getString(2)); o.put("album", c.getString(3)); o.put("dur", c.getLong(4) / 1000);
+          o.put("mid", c.getLong(0)); o.put("title", c.getString(1)); o.put("artist", c.getString(2)); o.put("album", c.getString(3)); o.put("dur", c.getLong(4) / 1000); if (c.getColumnCount() > 5) o.put("genre", c.getString(5));
           a.put(o);
         }
       } catch (Exception e) {}
       return a.toString();
+    }
+    @JavascriptInterface public int getVol() {
+      AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+      return am.getStreamVolume(3) * 100 / am.getStreamMaxVolume(3);
+    }
+    @JavascriptInterface public void setVol(int p) {
+      AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+      am.setStreamVolume(3, Math.round(p * am.getStreamMaxVolume(3) / 100f), 0);
     }
     @JavascriptInterface public void keep(boolean on, String t) {
       try {

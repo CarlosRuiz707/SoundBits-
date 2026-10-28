@@ -2,7 +2,15 @@ plugins { id 'com.android.application' }
 android {
     namespace 'app.tunebox'
     compileSdk 34
-    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 1; versionName "1.0" }
+    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 2; versionName "1.1" }
+    signingConfigs {
+        debug {
+            storeFile rootProject.file('tunebox.jks')
+            storePassword 'tunebox123'
+            keyAlias 'tunebox'
+            keyPassword 'tunebox123'
+        }
+    }
     buildTypes { release { minifyEnabled false } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
