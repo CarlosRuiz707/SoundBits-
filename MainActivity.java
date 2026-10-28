@@ -1,9 +1,9 @@
 package app.tunebox;
 import android.app.Activity;import android.content.*;import android.database.Cursor;import android.content.res.AssetFileDescriptor;
-import android.graphics.Bitmap;import android.media.AudioManager;import android.media.MediaMetadataRetriever;import android.util.Size;import java.net.*;import android.net.Uri;import android.os.*;import android.provider.MediaStore;import android.webkit.*;
+import android.graphics.Bitmap;import android.media.AudioManager;import android.media.MediaMetadataRetriever;import android.util.Size;import java.net.*;import android.net.ConnectivityManager;import android.net.Network;import android.net.NetworkCapabilities;import android.net.Uri;import android.os.*;import android.provider.MediaStore;import android.webkit.*;
 import org.json.*;import java.io.*;import java.util.*;
 public class MainActivity extends Activity {
-  WebView w; ValueCallback<Uri[]> cb;
+  WebView w; ValueCallback<Uri[]> cb; volatile boolean wifiOnly = true;
   protected void onCreate(Bundle b) {
     super.onCreate(b);
     w = new WebView(this); setContentView(w);
@@ -16,6 +16,8 @@ public class MainActivity extends Activity {
         if (!"tb.local".equals(u.getHost())) return null;
         String path = u.getPath() == null ? "" : u.getPath();
         Map<String, String> hd = new HashMap<>(); hd.put("Access-Control-Allow-Origin", "*");
+        if ((path.equals("/q") || path.equals("/d") || path.equals("/g")) && wifiOnly && !wifi() && !(path.equals("/g") && cached(u)))
+          return new WebResourceResponse("application/json", "utf-8", 503, "Blocked", hd, new ByteArrayInputStream("{}".getBytes()));
         if (path.equals("/q")) {
           try {
             HttpURLConnection hc = (HttpURLConnection) new URL("https://itunes.apple.com/search?media=music&entity=song&limit=1&term=" + URLEncoder.encode(u.getQueryParameter("term"), "UTF-8")).openConnection();
@@ -29,6 +31,24 @@ public class MainActivity extends Activity {
             hc.setConnectTimeout(8000); hc.setReadTimeout(8000);
             return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, hc.getInputStream());
           } catch (Exception e) { return new WebResourceResponse("application/json", "utf-8", 404, "Not Found", hd, new ByteArrayInputStream("{}".getBytes())); }
+        }
+        if (path.equals("/g")) {
+          try {
+            String src = u.getQueryParameter("u");
+            if (src == null) throw new Exception("u");
+            String host = Uri.parse(src).getHost();
+            if (!src.startsWith("https://") || host == null || !(host.endsWith("mzstatic.com") || host.endsWith("dzcdn.net") || host.endsWith("deezer.com"))) throw new Exception("host");
+            File f = imgFile(src);
+            if (!f.exists()) {
+              HttpURLConnection hc = (HttpURLConnection) new URL(src).openConnection();
+              hc.setConnectTimeout(8000); hc.setReadTimeout(12000);
+              File tmp = new File(f.getPath() + ".tmp");
+              try (InputStream in = hc.getInputStream(); FileOutputStream out = new FileOutputStream(tmp)) { byte[] bf = new byte[8192]; int n; while ((n = in.read(bf)) > 0) out.write(bf, 0, n); }
+              tmp.renameTo(f);
+            }
+            hd.put("Cache-Control", "max-age=31536000");
+            return new WebResourceResponse("image/jpeg", null, 200, "OK", hd, new FileInputStream(f));
+          } catch (Exception e) { return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", hd, new ByteArrayInputStream(new byte[0])); }
         }
         if (path.startsWith("/c/")) {
           byte[] art = null;
@@ -75,15 +95,36 @@ public class MainActivity extends Activity {
     if (rc == 1 && cb != null) { cb.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(res, d)); cb = null; }
   }
   public void onBackPressed() { w.evaluateJavascript("window.goBack&&goBack()", null); }
+  boolean wifi() {
+    try {
+      ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+      Network n = cm.getActiveNetwork();
+      NetworkCapabilities nc = n == null ? null : cm.getNetworkCapabilities(n);
+      return nc != null && nc.hasTransport(NetworkCapabilities.TRANSPORT_WIFI);
+    } catch (Exception e) { return false; }
+  }
+  File imgFile(String src) { File d = new File(getFilesDir(), "img"); d.mkdirs(); return new File(d, Integer.toHexString(src.hashCode()) + "_" + src.length()); }
+  boolean cached(Uri u) { String s = u.getQueryParameter("u"); return s != null && imgFile(s).exists(); }
   class Br {
+    @JavascriptInterface public boolean wifi() { return MainActivity.this.wifi(); }
+    @JavascriptInterface public void setWifiOnly(boolean b) { wifiOnly = b; }
+    @JavascriptInterface public double cacheMB() {
+      long t = 0; File[] fs = new File(getFilesDir(), "img").listFiles();
+      if (fs != null) for (File x : fs) t += x.length();
+      return Math.round(t / 104857.6) / 10.0;
+    }
+    @JavascriptInterface public void clearCache() {
+      File[] fs = new File(getFilesDir(), "img").listFiles();
+      if (fs != null) for (File x : fs) x.delete();
+    }
     @JavascriptInterface public String scan() {
       JSONArray a = new JSONArray();
       try (Cursor c = getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-          Build.VERSION.SDK_INT >= 30 ? new String[]{MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION, "genre"} : new String[]{MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION},
+          Build.VERSION.SDK_INT >= 30 ? new String[]{MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATE_ADDED, "genre"} : new String[]{MediaStore.Audio.Media._ID, MediaStore.Audio.Media.TITLE, MediaStore.Audio.Media.ARTIST, MediaStore.Audio.Media.ALBUM, MediaStore.Audio.Media.DURATION, MediaStore.Audio.Media.DATE_ADDED},
           MediaStore.Audio.Media.IS_MUSIC + "!=0", null, MediaStore.Audio.Media.TITLE + " COLLATE NOCASE")) {
         while (c != null && c.moveToNext()) {
           JSONObject o = new JSONObject();
-          o.put("mid", c.getLong(0)); o.put("title", c.getString(1)); o.put("artist", c.getString(2)); o.put("album", c.getString(3)); o.put("dur", c.getLong(4) / 1000); if (c.getColumnCount() > 5) o.put("genre", c.getString(5));
+          o.put("mid", c.getLong(0)); o.put("title", c.getString(1)); o.put("artist", c.getString(2)); o.put("album", c.getString(3)); o.put("dur", c.getLong(4) / 1000); o.put("added", c.getLong(5)); if (c.getColumnCount() > 6) o.put("genre", c.getString(6));
           a.put(o);
         }
       } catch (Exception e) {}
