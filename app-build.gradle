@@ -1,8 +1,33 @@
 plugins { id 'com.android.application' }
+
+// Coloca automaticamente los archivos sueltos de la raiz del repositorio (res_*.xml y *.java)
+// en las carpetas que Android espera. Funciona con el flujo de GitHub antiguo y con el nuevo.
+def rootFiles = rootProject.projectDir
+def genRes = new File(projectDir, 'build/genres')
+def genJava = new File(projectDir, 'build/genjava')
+tasks.register('arrange') {
+    doLast {
+        project.delete(genRes, genJava)
+        genRes.mkdirs(); genJava.mkdirs()
+        rootFiles.listFiles().each { f ->
+            if (!f.isFile()) return
+            if (f.name.startsWith('res_')) {
+                def parts = f.name.split('_', 3)
+                def d = new File(genRes, parts[1]); d.mkdirs()
+                new File(d, parts[2]).bytes = f.bytes
+            } else if (f.name.endsWith('.java')) {
+                new File(genJava, f.name).bytes = f.bytes
+            }
+        }
+    }
+}
+preBuild.dependsOn 'arrange'
+
 android {
     namespace 'app.tunebox'
     compileSdk 34
-    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 4; versionName "1.3" }
+    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 5; versionName "1.4" }
+    sourceSets { main { res.srcDir genRes; java.srcDir genJava } }
     signingConfigs {
         debug {
             storeFile rootProject.file('tunebox.jks')
