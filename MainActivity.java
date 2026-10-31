@@ -116,23 +116,7 @@ public class MainActivity extends Activity {
   File imgFile(String src) { File d = new File(getFilesDir(), "img"); d.mkdirs(); return new File(d, Integer.toHexString(src.hashCode()) + "_" + src.length()); }
   boolean cached(Uri u) { String s = u.getQueryParameter("u"); return s != null && imgFile(s).exists(); }
 
-  static final String YT_HTML = """
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{position:absolute;inset:0}</style></head><body><div id="p"></div>
-<script>
-var P=null;
-function send(o){parent.postMessage(JSON.stringify(o),"*")}
-function onYouTubeIframeAPIReady(){send({e:"ready"})}
-function load(m){
-  if(!P){P=new YT.Player("p",{width:"100%",height:"100%",videoId:m.id,playerVars:{playsinline:1,rel:0,enablejsapi:1,origin:"https://tb.local",autoplay:m.auto===false?0:1},events:{onStateChange:function(x){send({e:"st",s:x.data})},onError:function(x){send({e:"err",c:x.data})}}})}
-  else if(m.auto===false)P.cueVideoById(m.id);else P.loadVideoById(m.id)}
-addEventListener("message",function(ev){if(ev.source!==parent)return;var m;try{m=JSON.parse(ev.data)}catch(e){return}
-  if(m.c=="load")load(m);
-  else if(P&&P.playVideo){if(m.c=="play")P.playVideo();else if(m.c=="pause")P.pauseVideo();else if(m.c=="seek")P.seekTo(m.t,true)}});
-setInterval(function(){if(P&&P.getPlayerState&&P.getPlayerState()==1)send({e:"t",t:P.getCurrentTime(),d:P.getDuration()})},500);
-</script><script src="https://www.youtube.com/iframe_api"></script></body></html>
-""";
-  static final String UA = "SoundBits/1.7 (https://github.com/CarlosRuiz707/Tunebox-v-0.1)";
+  static final String UA = "SoundBits/1.8";
 
   String enc(String s) throws UnsupportedEncodingException { return URLEncoder.encode(s == null ? "" : s, "UTF-8"); }
   String httpGet(String url) throws IOException {
@@ -142,6 +126,93 @@ setInterval(function(){if(P&&P.getPlayerState&&P.getPlayerState()==1)send({e:"t"
     ByteArrayOutputStream bo = new ByteArrayOutputStream();
     try (InputStream in = hc.getInputStream()) { byte[] bf = new byte[8192]; int n; while ((n = in.read(bf)) > 0) bo.write(bf, 0, n); }
     return bo.toString("UTF-8");
+  }
+  String archiveCreator(JSONObject o) {
+    Object v = o.opt("creator");
+    if (v instanceof JSONArray) {
+      JSONArray a = (JSONArray) v; ArrayList<String> out = new ArrayList<>();
+      for (int i = 0; i < a.length() && i < 3; i++) { String x = a.optString(i, "").trim(); if (!x.isEmpty()) out.add(x); }
+      return android.text.TextUtils.join(", ", out);
+    }
+    return v == null || v == JSONObject.NULL ? "Artista desconocido" : String.valueOf(v).trim();
+  }
+  boolean allowedArchiveLicense(String license) {
+    String x = license == null ? "" : license.toLowerCase(Locale.ROOT);
+    return x.contains("creativecommons.org/licenses/by/") || x.contains("creativecommons.org/licenses/by-sa/")
+      || x.contains("creativecommons.org/publicdomain/zero/") || x.contains("creativecommons.org/publicdomain/mark/");
+  }
+  String archiveAudioFile(JSONArray files) {
+    String best = ""; int bestScore = -1;
+    for (int i = 0; i < files.length(); i++) {
+      JSONObject file = files.optJSONObject(i); if (file == null || file.optBoolean("private", false)) continue;
+      String name = file.optString("name", ""); String low = name.toLowerCase(Locale.ROOT);
+      if (!(low.endsWith(".mp3") || low.endsWith(".m4a") || low.endsWith(".ogg") || low.endsWith(".opus") || low.endsWith(".flac") || low.endsWith(".wav"))) continue;
+      if (low.contains("_spectrogram") || low.contains("_thumb") || low.endsWith("_sample.mp3")) continue;
+      long size = 0; try { size = Long.parseLong(file.optString("size", "0")); } catch (Exception e) {}
+      if (size <= 0) continue;
+      int score = low.endsWith(".mp3") ? 6 : low.endsWith(".m4a") ? 5 : low.endsWith(".ogg") ? 4 : low.endsWith(".opus") ? 3 : low.endsWith(".flac") ? 2 : 1;
+      if (score > bestScore) { bestScore = score; best = name; }
+    }
+    return best;
+  }
+  JSONArray searchArchive(String query) {
+    JSONArray out = new JSONArray();
+    try {
+      String clean = query == null ? "" : query.replaceAll("[^\\p{L}\\p{N} ]", " ").trim().replaceAll("\\s+", " ");
+      if (clean.length() < 2) return out;
+      String term = "\"" + clean + "\"";
+      String q = "mediatype:audio AND licenseurl:http*creativecommons.org* AND (title:" + term + " OR creator:" + term + " OR subject:" + term + ")";
+      String url = "https://archive.org/advancedsearch.php?q=" + enc(q)
+        + "&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=year&fl[]=licenseurl&rows=12&page=1&output=json";
+      JSONObject root = new JSONObject(httpGet(url));
+      JSONArray docs = root.optJSONObject("response") == null ? new JSONArray() : root.getJSONObject("response").optJSONArray("docs");
+      if (docs == null) return out;
+      for (int i = 0; i < docs.length() && i < 12; i++) {
+        JSONObject doc = docs.optJSONObject(i); if (doc == null) continue;
+        String id = doc.optString("identifier", ""), license = doc.optString("licenseurl", "");
+        if (id.isEmpty() || !allowedArchiveLicense(license)) continue;
+        try {
+          JSONObject detail = new JSONObject(httpGet("https://archive.org/metadata/" + Uri.encode(id)));
+          JSONObject md = detail.optJSONObject("metadata"); JSONArray files = detail.optJSONArray("files");
+          if (md == null || files == null) continue;
+          String itemLicense = md.optString("licenseurl", license);
+          if (!allowedArchiveLicense(itemLicense)) continue;
+          String file = archiveAudioFile(files); if (file.isEmpty()) continue;
+          String title = md.optString("title", doc.optString("title", "Sin título"));
+          String artist = archiveCreator(md); if (artist.isEmpty()) artist = archiveCreator(doc);
+          JSONObject track = new JSONObject();
+          track.put("id", id); track.put("title", title); track.put("artist", artist);
+          track.put("album", md.optString("album", ""));
+          track.put("license", itemLicense);
+          track.put("sourceUrl", "https://archive.org/details/" + Uri.encode(id));
+          track.put("url", "https://archive.org/download/" + Uri.encode(id) + "/" + Uri.encode(file));
+          track.put("art", "https://archive.org/services/img/" + Uri.encode(id));
+          track.put("dur", md.optDouble("runtime", 0));
+          out.put(track);
+        } catch (Exception ignored) {}
+      }
+    } catch (Exception ignored) {}
+    return out;
+  }
+  WebResourceResponse streamArchive(Uri request, Map<String, String> headers) throws IOException {
+    String raw = request.getQueryParameter("u");
+    if (raw == null) return err(headers, 404);
+    Uri target = Uri.parse(raw); String host = target.getHost();
+    if (!"https".equals(target.getScheme()) || host == null || !(host.equals("archive.org") || host.endsWith(".archive.org"))) return err(headers, 404);
+    HttpURLConnection hc = (HttpURLConnection) new URL(raw).openConnection();
+    hc.setConnectTimeout(12000); hc.setReadTimeout(20000); hc.setInstanceFollowRedirects(true);
+    hc.setRequestProperty("User-Agent", UA);
+    String range = request.getRequestHeaders().get("Range"); if (range != null) hc.setRequestProperty("Range", range);
+    int code = hc.getResponseCode();
+    if (code != 200 && code != 206) { InputStream es = hc.getErrorStream(); if (es != null) es.close(); return err(headers, code == 416 ? 404 : 503); }
+    String type = hc.getContentType(); if (type == null) type = "audio/mpeg";
+    String length = hc.getHeaderField("Content-Length"), contentRange = hc.getHeaderField("Content-Range");
+    headers.put("Accept-Ranges", "bytes"); headers.put("Cache-Control", "no-store");
+    if (length != null) headers.put("Content-Length", length);
+    if (contentRange != null) headers.put("Content-Range", contentRange);
+    InputStream upstream = hc.getInputStream();
+    InputStream body = new FilterInputStream(upstream) { public void close() throws IOException { try { super.close(); } finally { hc.disconnect(); } } };
+    return new WebResourceResponse(type, null, code, code == 206 ? "Partial Content" : "OK", headers, body);
   }
   String f(JSONObject o, String k) { return o.isNull(k) ? "" : o.optString(k, "").trim(); }
   boolean hasLy(JSONObject o) { return f(o, "syncedLyrics").length() > 0 || f(o, "plainLyrics").length() > 0; }
@@ -178,26 +249,18 @@ setInterval(function(){if(P&&P.getPlayerState&&P.getPlayerState()==1)send({e:"t"
     hd.put("Access-Control-Allow-Origin", "*");
     if ((path.equals("/q") || path.equals("/d") || path.equals("/g")) && wifiOnly && !wifi() && !(path.equals("/g") && cached(u))) return err(hd, 503);
     try {
-      if (path.equals("/yt")) {
-        hd.put("Cache-Control", "no-store");
-        return new WebResourceResponse("text/html", "utf-8", 200, "OK", hd, new ByteArrayInputStream(YT_HTML.getBytes("UTF-8")));
-      }
       if (path.equals("/l")) {
         String a = u.getQueryParameter("a"), t = u.getQueryParameter("t"), b = u.getQueryParameter("b"), d = u.getQueryParameter("d");
         JSONObject o = lyrics(a == null ? "" : a, t == null ? "" : t, b == null ? "" : b, d == null ? "" : d);
         if (o == null) return err(hd, 404);
         return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(o.toString().getBytes("UTF-8")));
       }
-      if (path.equals("/s")) {
-        String url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoSyndicated=true&videoCategoryId=10&maxResults=15&q="
-          + enc(u.getQueryParameter("q")) + "&key=" + enc(u.getQueryParameter("key"));
-        HttpURLConnection hc = (HttpURLConnection) new URL(url).openConnection();
-        hc.setConnectTimeout(8000); hc.setReadTimeout(10000);
-        int code = hc.getResponseCode();
-        InputStream is = code >= 400 ? hc.getErrorStream() : hc.getInputStream();
-        if (is == null) is = new ByteArrayInputStream("{}".getBytes());
-        return new WebResourceResponse("application/json", "utf-8", code, code >= 400 ? "Error" : "OK", hd, is);
+      if (path.equals("/stream")) {
+        JSONArray results = searchArchive(u.getQueryParameter("q"));
+        hd.put("Cache-Control", "no-store");
+        return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(results.toString().getBytes("UTF-8")));
       }
+      if (path.equals("/streamfile")) return streamArchive(u, hd);
       if (path.equals("/q") || path.equals("/d")) {
         String url = path.equals("/q")
           ? "https://itunes.apple.com/search?media=music&entity=song&limit=1&term=" + URLEncoder.encode(u.getQueryParameter("term"), "UTF-8")
@@ -277,7 +340,19 @@ setInterval(function(){if(P&&P.getPlayerState&&P.getPlayerState()==1)send({e:"t"
 
   Bitmap loadArt(long mid, String url) {
     try {
-      if (url != null && url.length() > 0) { File f = imgFile(url); if (f.exists()) return small(null, f.getPath()); }
+      if (url != null && url.length() > 0) {
+        File f = imgFile(url);
+        if (!f.exists() && url.startsWith("https://archive.org/services/img/")) {
+          HttpURLConnection hc = (HttpURLConnection) new URL(url).openConnection();
+          hc.setConnectTimeout(7000); hc.setReadTimeout(9000); hc.setRequestProperty("User-Agent", UA);
+          File tmp = new File(f.getPath() + ".tmp");
+          try (InputStream in = hc.getInputStream(); FileOutputStream out = new FileOutputStream(tmp)) {
+            byte[] bf = new byte[8192]; int n; while ((n = in.read(bf)) > 0) out.write(bf, 0, n);
+          } finally { hc.disconnect(); }
+          tmp.renameTo(f);
+        }
+        if (f.exists()) return small(null, f.getPath());
+      }
       if (mid > 0) {
         Uri cu = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mid);
         MediaMetadataRetriever mr = new MediaMetadataRetriever();
