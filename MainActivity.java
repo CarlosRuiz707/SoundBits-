@@ -194,8 +194,8 @@ public class MainActivity extends Activity {
     } catch (Exception ignored) {}
     return out;
   }
-  WebResourceResponse streamArchive(Uri request, Map<String, String> headers) throws IOException {
-    String raw = request.getQueryParameter("u");
+  WebResourceResponse streamArchive(WebResourceRequest request, Map<String, String> headers) throws IOException {
+    String raw = request.getUrl().getQueryParameter("u");
     if (raw == null) return err(headers, 404);
     Uri target = Uri.parse(raw); String host = target.getHost();
     if (!"https".equals(target.getScheme()) || host == null || !(host.equals("archive.org") || host.endsWith(".archive.org"))) return err(headers, 404);
@@ -260,7 +260,7 @@ public class MainActivity extends Activity {
         hd.put("Cache-Control", "no-store");
         return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(results.toString().getBytes("UTF-8")));
       }
-      if (path.equals("/streamfile")) return streamArchive(u, hd);
+      if (path.equals("/streamfile")) return streamArchive(r, hd);
       if (path.equals("/q") || path.equals("/d")) {
         String url = path.equals("/q")
           ? "https://itunes.apple.com/search?media=music&entity=song&limit=1&term=" + URLEncoder.encode(u.getQueryParameter("term"), "UTF-8")
