@@ -46,6 +46,13 @@ public class MainActivity extends Activity {
     w.addJavascriptInterface(new Br(), "Android");
     w.setWebViewClient(new WebViewClient() {
       public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) { return serve(r); }
+      public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
+        if (!r.isForMainFrame()) return false;
+        Uri u = r.getUrl();
+        if ("tb.local".equals(u.getHost()) || "file".equals(u.getScheme())) return false;
+        try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) {}
+        return true;
+      }
       public void onPageFinished(WebView v, String url) {
         if (pendingCmd != null) {
           final String c = pendingCmd; pendingCmd = null;
@@ -63,8 +70,16 @@ public class MainActivity extends Activity {
     });
     pendingCmd = getIntent() != null ? getIntent().getStringExtra("cmd") : null;
     w.loadUrl("file:///android_asset/index.html");
-    String[] ps = Build.VERSION.SDK_INT >= 33 ? new String[]{"android.permission.READ_MEDIA_AUDIO", "android.permission.POST_NOTIFICATIONS"} : new String[]{"android.permission.READ_EXTERNAL_STORAGE"};
-    requestPermissions(ps, 2);
+    ArrayList<String> ps = new ArrayList<>();
+    if (Build.VERSION.SDK_INT >= 33) { ps.add("android.permission.READ_MEDIA_AUDIO"); ps.add("android.permission.POST_NOTIFICATIONS"); }
+    else ps.add("android.permission.READ_EXTERNAL_STORAGE");
+    if (Build.VERSION.SDK_INT >= 31) ps.add("android.permission.BLUETOOTH_CONNECT");
+    requestPermissions(ps.toArray(new String[0]), 2);
+  }
+
+  protected void onStop() {
+    super.onStop();
+    js("window.tbBg&&tbBg()");
   }
 
   protected void onDestroy() {
@@ -101,6 +116,56 @@ public class MainActivity extends Activity {
   File imgFile(String src) { File d = new File(getFilesDir(), "img"); d.mkdirs(); return new File(d, Integer.toHexString(src.hashCode()) + "_" + src.length()); }
   boolean cached(Uri u) { String s = u.getQueryParameter("u"); return s != null && imgFile(s).exists(); }
 
+  static final String YT_HTML = """
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{position:absolute;inset:0}</style></head><body><div id="p"></div>
+<script>
+var P=null;
+function send(o){parent.postMessage(JSON.stringify(o),"*")}
+function onYouTubeIframeAPIReady(){send({e:"ready"})}
+function load(m){
+  if(!P){P=new YT.Player("p",{width:"100%",height:"100%",videoId:m.id,playerVars:{playsinline:1,rel:0,enablejsapi:1,origin:"https://tb.local",autoplay:m.auto===false?0:1},events:{onStateChange:function(x){send({e:"st",s:x.data})},onError:function(x){send({e:"err",c:x.data})}}})}
+  else if(m.auto===false)P.cueVideoById(m.id);else P.loadVideoById(m.id)}
+addEventListener("message",function(ev){if(ev.source!==parent)return;var m;try{m=JSON.parse(ev.data)}catch(e){return}
+  if(m.c=="load")load(m);
+  else if(P&&P.playVideo){if(m.c=="play")P.playVideo();else if(m.c=="pause")P.pauseVideo();else if(m.c=="seek")P.seekTo(m.t,true)}});
+setInterval(function(){if(P&&P.getPlayerState&&P.getPlayerState()==1)send({e:"t",t:P.getCurrentTime(),d:P.getDuration()})},500);
+</script><script src="https://www.youtube.com/iframe_api"></script></body></html>
+""";
+  static final String UA = "SoundBits/1.7 (https://github.com/CarlosRuiz707/Tunebox-v-0.1)";
+
+  String enc(String s) throws UnsupportedEncodingException { return URLEncoder.encode(s == null ? "" : s, "UTF-8"); }
+  String httpGet(String url) throws IOException {
+    HttpURLConnection hc = (HttpURLConnection) new URL(url).openConnection();
+    hc.setConnectTimeout(8000); hc.setReadTimeout(10000);
+    hc.setRequestProperty("User-Agent", UA);
+    ByteArrayOutputStream bo = new ByteArrayOutputStream();
+    try (InputStream in = hc.getInputStream()) { byte[] bf = new byte[8192]; int n; while ((n = in.read(bf)) > 0) bo.write(bf, 0, n); }
+    return bo.toString("UTF-8");
+  }
+  String f(JSONObject o, String k) { return o.isNull(k) ? "" : o.optString(k, "").trim(); }
+  boolean hasLy(JSONObject o) { return f(o, "syncedLyrics").length() > 0 || f(o, "plainLyrics").length() > 0; }
+  /* Lyrics from LRCLIB (needs internet; nothing is stored on the device) */
+  JSONObject lyrics(String ar, String ti, String al, String du) {
+    try {
+      if (ar.isEmpty() || ti.isEmpty()) return null;
+      try {
+        String url = "https://lrclib.net/api/get?artist_name=" + enc(ar) + "&track_name=" + enc(ti)
+          + (al.isEmpty() ? "" : "&album_name=" + enc(al)) + (du.isEmpty() || du.equals("0") ? "" : "&duration=" + enc(du));
+        JSONObject o = new JSONObject(httpGet(url));
+        if (hasLy(o)) return o;
+      } catch (Exception e) {}
+      JSONArray a = new JSONArray(httpGet("https://lrclib.net/api/search?track_name=" + enc(ti) + "&artist_name=" + enc(ar)));
+      JSONObject plain = null;
+      for (int i = 0; i < a.length(); i++) {
+        JSONObject o = a.getJSONObject(i);
+        if (f(o, "syncedLyrics").length() > 0) return o;
+        if (plain == null && hasLy(o)) plain = o;
+      }
+      return plain;
+    } catch (Exception e) { return null; }
+  }
+
   WebResourceResponse err(Map<String, String> hd, int code) {
     return new WebResourceResponse("application/json", "utf-8", code, code == 503 ? "Blocked" : "Not Found", hd, new ByteArrayInputStream("{}".getBytes()));
   }
@@ -113,6 +178,26 @@ public class MainActivity extends Activity {
     hd.put("Access-Control-Allow-Origin", "*");
     if ((path.equals("/q") || path.equals("/d") || path.equals("/g")) && wifiOnly && !wifi() && !(path.equals("/g") && cached(u))) return err(hd, 503);
     try {
+      if (path.equals("/yt")) {
+        hd.put("Cache-Control", "no-store");
+        return new WebResourceResponse("text/html", "utf-8", 200, "OK", hd, new ByteArrayInputStream(YT_HTML.getBytes("UTF-8")));
+      }
+      if (path.equals("/l")) {
+        String a = u.getQueryParameter("a"), t = u.getQueryParameter("t"), b = u.getQueryParameter("b"), d = u.getQueryParameter("d");
+        JSONObject o = lyrics(a == null ? "" : a, t == null ? "" : t, b == null ? "" : b, d == null ? "" : d);
+        if (o == null) return err(hd, 404);
+        return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(o.toString().getBytes("UTF-8")));
+      }
+      if (path.equals("/s")) {
+        String url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoSyndicated=true&videoCategoryId=10&maxResults=15&q="
+          + enc(u.getQueryParameter("q")) + "&key=" + enc(u.getQueryParameter("key"));
+        HttpURLConnection hc = (HttpURLConnection) new URL(url).openConnection();
+        hc.setConnectTimeout(8000); hc.setReadTimeout(10000);
+        int code = hc.getResponseCode();
+        InputStream is = code >= 400 ? hc.getErrorStream() : hc.getInputStream();
+        if (is == null) is = new ByteArrayInputStream("{}".getBytes());
+        return new WebResourceResponse("application/json", "utf-8", code, code >= 400 ? "Error" : "OK", hd, is);
+      }
       if (path.equals("/q") || path.equals("/d")) {
         String url = path.equals("/q")
           ? "https://itunes.apple.com/search?media=music&entity=song&limit=1&term=" + URLEncoder.encode(u.getQueryParameter("term"), "UTF-8")
@@ -236,6 +321,24 @@ public class MainActivity extends Activity {
       } }).start();
     }
     @JavascriptInterface public boolean wifi() { return MainActivity.this.wifi(); }
+    @JavascriptInterface public void openUrl(final String url) {
+      runOnUiThread(new Runnable() { public void run() {
+        try { if (url != null && url.startsWith("https://")) startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception e) {}
+      } });
+    }
+    @JavascriptInterface public String outputDevice() {
+      try {
+        AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
+        String other = null;
+        for (android.media.AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+          int t = d.getType();
+          if (t == 8 || t == 7 || t == 26 || t == 27) { CharSequence n = d.getProductName(); return n != null && n.length() > 0 ? n.toString() : "Bluetooth"; }
+          if (t == 3 || t == 4) other = "Auriculares con cable"; else if (t == 22 || t == 11) other = "Audio USB"; else if (t == 9) other = "HDMI";
+        }
+        if (other != null) return other;
+      } catch (Exception e) {}
+      return "Este teléfono";
+    }
     @JavascriptInterface public void setWifiOnly(boolean b) { wifiOnly = b; }
     @JavascriptInterface public double cacheMB() {
       long t = 0; File[] fs = new File(getFilesDir(), "img").listFiles();
