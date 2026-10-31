@@ -116,7 +116,7 @@ public class MainActivity extends Activity {
   File imgFile(String src) { File d = new File(getFilesDir(), "img"); d.mkdirs(); return new File(d, Integer.toHexString(src.hashCode()) + "_" + src.length()); }
   boolean cached(Uri u) { String s = u.getQueryParameter("u"); return s != null && imgFile(s).exists(); }
 
-  static final String UA = "SoundBits/1.8";
+  static final String UA = "SoundBits/2.0";
 
   String enc(String s) throws UnsupportedEncodingException { return URLEncoder.encode(s == null ? "" : s, "UTF-8"); }
   String httpGet(String url) throws IOException {
