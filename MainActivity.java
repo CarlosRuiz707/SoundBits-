@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.net.ConnectivityManager;
@@ -15,6 +16,7 @@ import android.net.NetworkCapabilities;
 import android.net.Uri;
 import android.os.*;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Size;
 import android.view.View;
 import android.webkit.*;
@@ -46,13 +48,6 @@ public class MainActivity extends Activity {
     w.addJavascriptInterface(new Br(), "Android");
     w.setWebViewClient(new WebViewClient() {
       public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) { return serve(r); }
-      public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
-        if (!r.isForMainFrame()) return false;
-        Uri u = r.getUrl();
-        if ("tb.local".equals(u.getHost()) || "file".equals(u.getScheme())) return false;
-        try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) {}
-        return true;
-      }
       public void onPageFinished(WebView v, String url) {
         if (pendingCmd != null) {
           final String c = pendingCmd; pendingCmd = null;
@@ -70,16 +65,11 @@ public class MainActivity extends Activity {
     });
     pendingCmd = getIntent() != null ? getIntent().getStringExtra("cmd") : null;
     w.loadUrl("file:///android_asset/index.html");
-    ArrayList<String> ps = new ArrayList<>();
-    if (Build.VERSION.SDK_INT >= 33) { ps.add("android.permission.READ_MEDIA_AUDIO"); ps.add("android.permission.POST_NOTIFICATIONS"); }
-    else ps.add("android.permission.READ_EXTERNAL_STORAGE");
-    if (Build.VERSION.SDK_INT >= 31) ps.add("android.permission.BLUETOOTH_CONNECT");
-    requestPermissions(ps.toArray(new String[0]), 2);
-  }
-
-  protected void onStop() {
-    super.onStop();
-    js("window.tbBg&&tbBg()");
+    java.util.ArrayList<String> pl = new java.util.ArrayList<String>();
+    if (Build.VERSION.SDK_INT >= 33) { pl.add("android.permission.READ_MEDIA_AUDIO"); pl.add("android.permission.POST_NOTIFICATIONS"); } else pl.add("android.permission.READ_EXTERNAL_STORAGE");
+    if (Build.VERSION.SDK_INT >= 31) pl.add("android.permission.BLUETOOTH_CONNECT");
+    String[] ps = pl.toArray(new String[0]);
+    requestPermissions(ps, 2);
   }
 
   protected void onDestroy() {
@@ -116,127 +106,6 @@ public class MainActivity extends Activity {
   File imgFile(String src) { File d = new File(getFilesDir(), "img"); d.mkdirs(); return new File(d, Integer.toHexString(src.hashCode()) + "_" + src.length()); }
   boolean cached(Uri u) { String s = u.getQueryParameter("u"); return s != null && imgFile(s).exists(); }
 
-  static final String UA = "SoundBits/2.0";
-
-  String enc(String s) throws UnsupportedEncodingException { return URLEncoder.encode(s == null ? "" : s, "UTF-8"); }
-  String httpGet(String url) throws IOException {
-    HttpURLConnection hc = (HttpURLConnection) new URL(url).openConnection();
-    hc.setConnectTimeout(8000); hc.setReadTimeout(10000);
-    hc.setRequestProperty("User-Agent", UA);
-    ByteArrayOutputStream bo = new ByteArrayOutputStream();
-    try (InputStream in = hc.getInputStream()) { byte[] bf = new byte[8192]; int n; while ((n = in.read(bf)) > 0) bo.write(bf, 0, n); }
-    return bo.toString("UTF-8");
-  }
-  String archiveCreator(JSONObject o) {
-    Object v = o.opt("creator");
-    if (v instanceof JSONArray) {
-      JSONArray a = (JSONArray) v; ArrayList<String> out = new ArrayList<>();
-      for (int i = 0; i < a.length() && i < 3; i++) { String x = a.optString(i, "").trim(); if (!x.isEmpty()) out.add(x); }
-      return android.text.TextUtils.join(", ", out);
-    }
-    return v == null || v == JSONObject.NULL ? "Artista desconocido" : String.valueOf(v).trim();
-  }
-  boolean allowedArchiveLicense(String license) {
-    String x = license == null ? "" : license.toLowerCase(Locale.ROOT);
-    return x.contains("creativecommons.org/licenses/by/") || x.contains("creativecommons.org/licenses/by-sa/")
-      || x.contains("creativecommons.org/publicdomain/zero/") || x.contains("creativecommons.org/publicdomain/mark/");
-  }
-  String archiveAudioFile(JSONArray files) {
-    String best = ""; int bestScore = -1;
-    for (int i = 0; i < files.length(); i++) {
-      JSONObject file = files.optJSONObject(i); if (file == null || file.optBoolean("private", false)) continue;
-      String name = file.optString("name", ""); String low = name.toLowerCase(Locale.ROOT);
-      if (!(low.endsWith(".mp3") || low.endsWith(".m4a") || low.endsWith(".ogg") || low.endsWith(".opus") || low.endsWith(".flac") || low.endsWith(".wav"))) continue;
-      if (low.contains("_spectrogram") || low.contains("_thumb") || low.endsWith("_sample.mp3")) continue;
-      long size = 0; try { size = Long.parseLong(file.optString("size", "0")); } catch (Exception e) {}
-      if (size <= 0) continue;
-      int score = low.endsWith(".mp3") ? 6 : low.endsWith(".m4a") ? 5 : low.endsWith(".ogg") ? 4 : low.endsWith(".opus") ? 3 : low.endsWith(".flac") ? 2 : 1;
-      if (score > bestScore) { bestScore = score; best = name; }
-    }
-    return best;
-  }
-  JSONArray searchArchive(String query) {
-    JSONArray out = new JSONArray();
-    try {
-      String clean = query == null ? "" : query.replaceAll("[^\\p{L}\\p{N} ]", " ").trim().replaceAll("\\s+", " ");
-      if (clean.length() < 2) return out;
-      String term = "\"" + clean + "\"";
-      String q = "mediatype:audio AND licenseurl:http*creativecommons.org* AND (title:" + term + " OR creator:" + term + " OR subject:" + term + ")";
-      String url = "https://archive.org/advancedsearch.php?q=" + enc(q)
-        + "&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=year&fl[]=licenseurl&rows=12&page=1&output=json";
-      JSONObject root = new JSONObject(httpGet(url));
-      JSONArray docs = root.optJSONObject("response") == null ? new JSONArray() : root.getJSONObject("response").optJSONArray("docs");
-      if (docs == null) return out;
-      for (int i = 0; i < docs.length() && i < 12; i++) {
-        JSONObject doc = docs.optJSONObject(i); if (doc == null) continue;
-        String id = doc.optString("identifier", ""), license = doc.optString("licenseurl", "");
-        if (id.isEmpty() || !allowedArchiveLicense(license)) continue;
-        try {
-          JSONObject detail = new JSONObject(httpGet("https://archive.org/metadata/" + Uri.encode(id)));
-          JSONObject md = detail.optJSONObject("metadata"); JSONArray files = detail.optJSONArray("files");
-          if (md == null || files == null) continue;
-          String itemLicense = md.optString("licenseurl", license);
-          if (!allowedArchiveLicense(itemLicense)) continue;
-          String file = archiveAudioFile(files); if (file.isEmpty()) continue;
-          String title = md.optString("title", doc.optString("title", "Sin título"));
-          String artist = archiveCreator(md); if (artist.isEmpty()) artist = archiveCreator(doc);
-          JSONObject track = new JSONObject();
-          track.put("id", id); track.put("title", title); track.put("artist", artist);
-          track.put("album", md.optString("album", ""));
-          track.put("license", itemLicense);
-          track.put("sourceUrl", "https://archive.org/details/" + Uri.encode(id));
-          track.put("url", "https://archive.org/download/" + Uri.encode(id) + "/" + Uri.encode(file));
-          track.put("art", "https://archive.org/services/img/" + Uri.encode(id));
-          track.put("dur", md.optDouble("runtime", 0));
-          out.put(track);
-        } catch (Exception ignored) {}
-      }
-    } catch (Exception ignored) {}
-    return out;
-  }
-  WebResourceResponse streamArchive(WebResourceRequest request, Map<String, String> headers) throws IOException {
-    String raw = request.getUrl().getQueryParameter("u");
-    if (raw == null) return err(headers, 404);
-    Uri target = Uri.parse(raw); String host = target.getHost();
-    if (!"https".equals(target.getScheme()) || host == null || !(host.equals("archive.org") || host.endsWith(".archive.org"))) return err(headers, 404);
-    HttpURLConnection hc = (HttpURLConnection) new URL(raw).openConnection();
-    hc.setConnectTimeout(12000); hc.setReadTimeout(20000); hc.setInstanceFollowRedirects(true);
-    hc.setRequestProperty("User-Agent", UA);
-    String range = request.getRequestHeaders().get("Range"); if (range != null) hc.setRequestProperty("Range", range);
-    int code = hc.getResponseCode();
-    if (code != 200 && code != 206) { InputStream es = hc.getErrorStream(); if (es != null) es.close(); return err(headers, code == 416 ? 404 : 503); }
-    String type = hc.getContentType(); if (type == null) type = "audio/mpeg";
-    String length = hc.getHeaderField("Content-Length"), contentRange = hc.getHeaderField("Content-Range");
-    headers.put("Accept-Ranges", "bytes"); headers.put("Cache-Control", "no-store");
-    if (length != null) headers.put("Content-Length", length);
-    if (contentRange != null) headers.put("Content-Range", contentRange);
-    InputStream upstream = hc.getInputStream();
-    InputStream body = new FilterInputStream(upstream) { public void close() throws IOException { try { super.close(); } finally { hc.disconnect(); } } };
-    return new WebResourceResponse(type, null, code, code == 206 ? "Partial Content" : "OK", headers, body);
-  }
-  String f(JSONObject o, String k) { return o.isNull(k) ? "" : o.optString(k, "").trim(); }
-  boolean hasLy(JSONObject o) { return f(o, "syncedLyrics").length() > 0 || f(o, "plainLyrics").length() > 0; }
-  /* Lyrics from LRCLIB (needs internet; nothing is stored on the device) */
-  JSONObject lyrics(String ar, String ti, String al, String du) {
-    try {
-      if (ar.isEmpty() || ti.isEmpty()) return null;
-      try {
-        String url = "https://lrclib.net/api/get?artist_name=" + enc(ar) + "&track_name=" + enc(ti)
-          + (al.isEmpty() ? "" : "&album_name=" + enc(al)) + (du.isEmpty() || du.equals("0") ? "" : "&duration=" + enc(du));
-        JSONObject o = new JSONObject(httpGet(url));
-        if (hasLy(o)) return o;
-      } catch (Exception e) {}
-      JSONArray a = new JSONArray(httpGet("https://lrclib.net/api/search?track_name=" + enc(ti) + "&artist_name=" + enc(ar)));
-      JSONObject plain = null;
-      for (int i = 0; i < a.length(); i++) {
-        JSONObject o = a.getJSONObject(i);
-        if (f(o, "syncedLyrics").length() > 0) return o;
-        if (plain == null && hasLy(o)) plain = o;
-      }
-      return plain;
-    } catch (Exception e) { return null; }
-  }
-
   WebResourceResponse err(Map<String, String> hd, int code) {
     return new WebResourceResponse("application/json", "utf-8", code, code == 503 ? "Blocked" : "Not Found", hd, new ByteArrayInputStream("{}".getBytes()));
   }
@@ -249,18 +118,6 @@ public class MainActivity extends Activity {
     hd.put("Access-Control-Allow-Origin", "*");
     if ((path.equals("/q") || path.equals("/d") || path.equals("/g")) && wifiOnly && !wifi() && !(path.equals("/g") && cached(u))) return err(hd, 503);
     try {
-      if (path.equals("/l")) {
-        String a = u.getQueryParameter("a"), t = u.getQueryParameter("t"), b = u.getQueryParameter("b"), d = u.getQueryParameter("d");
-        JSONObject o = lyrics(a == null ? "" : a, t == null ? "" : t, b == null ? "" : b, d == null ? "" : d);
-        if (o == null) return err(hd, 404);
-        return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(o.toString().getBytes("UTF-8")));
-      }
-      if (path.equals("/stream")) {
-        JSONArray results = searchArchive(u.getQueryParameter("q"));
-        hd.put("Cache-Control", "no-store");
-        return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(results.toString().getBytes("UTF-8")));
-      }
-      if (path.equals("/streamfile")) return streamArchive(r, hd);
       if (path.equals("/q") || path.equals("/d")) {
         String url = path.equals("/q")
           ? "https://itunes.apple.com/search?media=music&entity=song&limit=1&term=" + URLEncoder.encode(u.getQueryParameter("term"), "UTF-8")
@@ -340,19 +197,7 @@ public class MainActivity extends Activity {
 
   Bitmap loadArt(long mid, String url) {
     try {
-      if (url != null && url.length() > 0) {
-        File f = imgFile(url);
-        if (!f.exists() && url.startsWith("https://archive.org/services/img/")) {
-          HttpURLConnection hc = (HttpURLConnection) new URL(url).openConnection();
-          hc.setConnectTimeout(7000); hc.setReadTimeout(9000); hc.setRequestProperty("User-Agent", UA);
-          File tmp = new File(f.getPath() + ".tmp");
-          try (InputStream in = hc.getInputStream(); FileOutputStream out = new FileOutputStream(tmp)) {
-            byte[] bf = new byte[8192]; int n; while ((n = in.read(bf)) > 0) out.write(bf, 0, n);
-          } finally { hc.disconnect(); }
-          tmp.renameTo(f);
-        }
-        if (f.exists()) return small(null, f.getPath());
-      }
+      if (url != null && url.length() > 0) { File f = imgFile(url); if (f.exists()) return small(null, f.getPath()); }
       if (mid > 0) {
         Uri cu = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, mid);
         MediaMetadataRetriever mr = new MediaMetadataRetriever();
@@ -395,25 +240,47 @@ public class MainActivity extends Activity {
         } else PlayService.inst.refresh();
       } }).start();
     }
-    @JavascriptInterface public boolean wifi() { return MainActivity.this.wifi(); }
-    @JavascriptInterface public void openUrl(final String url) {
-      runOnUiThread(new Runnable() { public void run() {
-        try { if (url != null && url.startsWith("https://")) startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url))); } catch (Exception e) {}
-      } });
-    }
-    @JavascriptInterface public String outputDevice() {
+    @JavascriptInterface public String device() {
       try {
         AudioManager am = (AudioManager) getSystemService(AUDIO_SERVICE);
-        String other = null;
-        for (android.media.AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
-          int t = d.getType();
-          if (t == 8 || t == 7 || t == 26 || t == 27) { CharSequence n = d.getProductName(); return n != null && n.length() > 0 ? n.toString() : "Bluetooth"; }
-          if (t == 3 || t == 4) other = "Auriculares con cable"; else if (t == 22 || t == 11) other = "Audio USB"; else if (t == 9) other = "HDMI";
+        JSONArray arr = new JSONArray(); String cur = null, curT = "speaker";
+        for (AudioDeviceInfo d : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+          int ty = d.getType(); String type;
+          if (ty == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || ty == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || ty == 26) type = "bt";
+          else if (ty == AudioDeviceInfo.TYPE_WIRED_HEADPHONES || ty == AudioDeviceInfo.TYPE_WIRED_HEADSET || ty == AudioDeviceInfo.TYPE_USB_HEADSET) type = "wired";
+          else if (ty == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) type = "speaker";
+          else continue;
+          String nm = d.getProductName() == null ? "" : d.getProductName().toString();
+          JSONObject o = new JSONObject(); o.put("name", nm); o.put("type", type); arr.put(o);
+          if (!type.equals("speaker") && (cur == null || (type.equals("bt") && !curT.equals("bt")))) { cur = nm; curT = type; }
         }
-        if (other != null) return other;
-      } catch (Exception e) {}
-      return "Este teléfono";
+        JSONObject r = new JSONObject(); r.put("cur", cur); r.put("type", curT); r.put("list", arr);
+        return r.toString();
+      } catch (Exception e) { return "{}"; }
     }
+    @JavascriptInterface public void openOutput() {
+      try {
+        Intent i = Build.VERSION.SDK_INT >= 29 ? new Intent(Settings.Panel.ACTION_VOLUME) : new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(i);
+      } catch (Exception e) {
+        try { startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); } catch (Exception x) {}
+      }
+    }
+    @JavascriptInterface public void openUrl(String u) {
+      try {
+        Uri x = Uri.parse(u); String h = x.getHost();
+        if (!"https".equals(x.getScheme()) || h == null || !(h.equals("github.com") || h.endsWith(".github.com") || h.endsWith("githubusercontent.com"))) return;
+        startActivity(new Intent(Intent.ACTION_VIEW, x).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+      } catch (Exception e) {}
+    }
+    @JavascriptInterface public String version() {
+      try {
+        android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
+        long code = Build.VERSION.SDK_INT >= 28 ? pi.getLongVersionCode() : pi.versionCode;
+        return "{\"name\":\"" + pi.versionName + "\",\"code\":" + code + "}";
+      } catch (Exception e) { return "{}"; }
+    }
+    @JavascriptInterface public boolean wifi() { return MainActivity.this.wifi(); }
     @JavascriptInterface public void setWifiOnly(boolean b) { wifiOnly = b; }
     @JavascriptInterface public double cacheMB() {
       long t = 0; File[] fs = new File(getFilesDir(), "img").listFiles();

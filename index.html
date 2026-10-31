@@ -40,7 +40,7 @@ code{background:var(--card);padding:1px 5px;border-radius:4px;font-size:12px}
 #np.show{display:block}#cvs{position:absolute;inset:0;width:100%;height:100%}
 #npc{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 8px) 20px calc(env(safe-area-inset-bottom,0px) + 16px);overflow:auto;max-width:560px;margin:0 auto}
 #np .hd{display:flex;align-items:center;justify-content:space-between;height:44px}#np .hd small{color:var(--mu);font-size:12px;text-align:center}
-#art{touch-action:pan-y;position:relative;overflow:hidden;width:min(78%,300px);aspect-ratio:1;margin:auto;border-radius:16px;display:grid;place-items:center;font-size:72px;font-weight:700;box-shadow:0 20px 50px #0008;transition:transform .08s}
+#art{position:relative;overflow:hidden;width:min(78%,300px);aspect-ratio:1;margin:auto;border-radius:16px;display:grid;place-items:center;font-size:72px;font-weight:700;box-shadow:0 20px 50px #0008;transition:transform .08s}
 #nt{font-size:22px;font-weight:700}#sc{width:100%;accent-color:#fff;margin:12px 0 0}.tm{display:flex;justify-content:space-between;color:var(--mu);font-size:12px}
 .ctl{display:flex;align-items:center;justify-content:space-between;margin:8px 0}.ctl .ib{font-size:24px;color:#fff}.big{width:66px;height:66px;border-radius:50%;background:#fff;color:#000;font-size:26px;padding:0}
 .ex{display:flex;justify-content:space-around;margin-top:4px}.ex button{font-size:12px;padding:6px 10px;background:#ffffff1f}
@@ -133,26 +133,9 @@ input[type=text]{border-radius:12px;background:rgba(120,120,128,.16)}
 .sheet textarea{width:100%;height:150px;background:rgba(120,120,128,.16);color:var(--tx);border:0;border-radius:12px;padding:12px;font:inherit;margin:6px 0}
 .gridc{display:grid;grid-template-columns:1fr 1fr;gap:16px}.gc{cursor:pointer}.gc .cv{width:100%;height:auto;aspect-ratio:1;font-size:46px;margin-bottom:6px}.gc .t{font-weight:600}
 .lbar{display:flex;gap:8px;align-items:center;margin-bottom:6px}.lbar .segc{flex:1;margin:0}
-.bar2{display:flex;align-items:center;justify-content:space-between;margin:6px -6px 0}
-.bar2 .ib{color:#fff;display:flex;align-items:center;gap:6px;padding:8px 6px}.bar2 .ib svg{width:24px;height:24px}
-.bar2 .rt{display:flex;gap:10px}
-#bdv{color:var(--ac);font-size:12px;font-weight:600;max-width:55%}#bdv span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.bar2 .ib.on-h{color:var(--ac)}
-
-/* SoundBits 2.0 — Liquid Glass, restrained for mobile efficiency */
-:root{--glass:rgba(255,255,255,.58);--glass-line:rgba(255,255,255,.34);--glass-shadow:0 8px 26px rgba(0,0,0,.08)}
-:root[data-theme="dark"]{--glass:rgba(34,34,38,.66);--glass-line:rgba(255,255,255,.09);--glass-shadow:0 8px 26px rgba(0,0,0,.24)}\n@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--glass:rgba(34,34,38,.66);--glass-line:rgba(255,255,255,.09);--glass-shadow:0 8px 26px rgba(0,0,0,.24)}}
-.card{background:linear-gradient(145deg,var(--glass),color-mix(in srgb,var(--card) 88%,transparent));border:1px solid var(--glass-line);box-shadow:var(--glass-shadow)}
-.tile{background:linear-gradient(145deg,var(--glass),var(--card));border:1px solid var(--glass-line)}
-#mini{background:color-mix(in srgb,var(--glass) 88%,transparent);border:1px solid var(--glass-line)}
-#nav{background:color-mix(in srgb,var(--glass) 82%,transparent);border-top:1px solid var(--glass-line)}
-.sheet>div{background:color-mix(in srgb,var(--bg) 88%,transparent);border:1px solid var(--glass-line);box-shadow:0 -14px 40px rgba(0,0,0,.18)}
-.chips button,.segc{border:1px solid var(--glass-line)}
-button{transition:background-color .15s ease,border-color .15s ease}
-@media(prefers-reduced-motion:reduce){button{transition:none!important}}
-:root[data-lite="1"] .card,:root[data-lite="1"] .tile{background:var(--card);border-color:var(--ln)}
-:root[data-lite="1"] .sheet>div{background:var(--bg);border-color:var(--ln)}
-
+.ex{display:none}
+.nbar{display:flex;align-items:center;gap:8px;margin:10px 0 4px}.nbar .ib{color:#fff}
+.dv{display:flex;align-items:center;gap:8px;background:none;padding:6px 4px;color:#fff}.dv svg{width:24px;height:24px;display:block}.dv .dn{font-size:13px;font-weight:600;color:var(--ac);max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dv.ext svg{color:var(--ac)}
 </style>
 </head>
 <body>
@@ -165,7 +148,7 @@ button{transition:background-color .15s ease,border-color .15s ease}
   <div style="display:flex;align-items:center;gap:8px"><div class="m" style="cursor:default"><div id="nt" class="t"></div><div class="a" id="na"></div></div><button class="ib" id="nh" style="font-size:26px">♡</button></div>
   <input type="range" id="sc" min="0" max="1000" value="0"><div class="tm"><span id="tc">0:00</span><span id="td">0:00</span></div>
   <div class="ctl"><button class="ib" id="ns">⇄</button><button class="ib" id="npv">⏮</button><button class="big" id="np2">▶</button><button class="ib" id="nx">⏭</button><button class="ib" id="nr">↻</button></div>
-  <div class="vl"><span>🔈</span><input type="range" id="vol" min="0" max="100" value="70"><span>🔊</span></div><div class="bar2"><button class="ib" id="bdv" aria-label="Dispositivo"></button><div class="rt"><button class="ib" id="bly" aria-label="Letra"></button><button class="ib" id="bq" aria-label="Cola"></button></div></div><div id="exh" hidden><button id="bsp">1×</button><button id="bsl">Temporizador</button><button id="bcv">Canvas ✓</button><button id="bcs">Auto</button></div></div>
+  <div class="vl"><span>🔈</span><input type="range" id="vol" min="0" max="100" value="70"><span>🔊</span></div><div class="nbar"><button class="dv" id="bdev"><span id="bdi"></span><span class="dn" id="bdn"></span></button><span style="flex:1"></span><button class="ib" id="bly" aria-label="Letra"></button><button class="ib" id="bqu" aria-label="Cola"></button></div><div class="ex"><button id="bq">Cola</button><button id="bsp">1×</button><button id="bsl">Temporizador</button><button id="bcv">Canvas ✓</button><button id="bcs">Auto</button></div></div>
   <div class="npb">
     <div class="card" id="lyc"><div class="lych"><b>Letra</b><span class="a">Mostrar más ›</span></div><div class="lyp" id="lyp"></div></div>
     <div class="card" id="abt"></div>
@@ -174,22 +157,28 @@ button{transition:background-color .15s ease,border-color .15s ease}
 <div id="ly"><div class="lyh"><button class="ib" id="lyx" style="color:#fff">⌄</button><div class="m" style="cursor:default;text-align:center"><div class="t" id="lyT1" style="font-weight:700"></div><div class="a" id="lyA1"></div></div><span style="width:40px"></span></div><div id="lyv"><div id="lyl"></div></div><div class="lyf"><input type="range" id="lsc" min="0" max="1000" value="0"><div class="tm"><span id="ltc">0:00</span><span id="ltd">0:00</span></div><div class="ctl" style="padding:0 18%"><button class="ib" id="lpv"></button><button class="big" id="lpl"></button><button class="ib" id="lnx"></button></div></div></div>
 <div class="sheet" id="sheet"><div id="sb"></div></div><div id="toast"></div><audio id="au" crossorigin="anonymous"></audio><nav id="nav"></nav>
 <script>
-var lib=[],lists=[],likes={},recents=[],streamSaved={},tab="home",chip="Todo",q="",open=null,queue=[],qi=-1,playing=false,shuf=false,rep=false,speed=1,sleepM=0,sleepH=null,cvOn=true,drag=false,tsel=null,Ls=[],bass=0,hist=[],resN=0;
+var lib=[],lists=[],likes={},recents=[],tab="home",chip="Todo",q="",open=null,queue=[],qi=-1,playing=false,shuf=false,rep=false,speed=1,sleepM=0,sleepH=null,cvOn=true,drag=false,tsel=null,Ls=[],bass=0,hist=[];
 var $=function(i){return document.getElementById(i)},au=$("au"),AN=!!window.Android;
-function ld(){try{var d=JSON.parse(localStorage.getItem("tb4")||"null");if(d){lists=d.lists||[];likes=d.likes||{};recents=d.recents||[];plays=d.plays||{};streamSaved=d.streamSaved||{}}}catch(e){}}
-function sv(){try{localStorage.setItem("tb4",JSON.stringify({lists:lists,likes:likes,recents:recents,plays:plays,streamSaved:streamSaved}))}catch(e){}}
+function ld(){try{var d=JSON.parse(localStorage.getItem("tb4")||"null");if(d){lists=d.lists||[];likes=d.likes||{};recents=d.recents||[];plays=d.plays||{}}}catch(e){}}
+function sv(){try{localStorage.setItem("tb4",JSON.stringify({lists:lists,likes:likes,recents:recents,plays:plays}))}catch(e){}}
 function esc(s){var d=document.createElement("div");d.textContent=s==null?"":s;return d.innerHTML.replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
 function norm(s){return(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/g,"")}
 function hue(s){var h=0;s=s||"?";for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h}
 function bg(s){var h=hue(s);return"linear-gradient(135deg,hsl("+h+",62%,50%),hsl("+(h+40)+",60%,30%))"}
 function fmt(s){s=Math.round(s||0);return Math.floor(s/60)+":"+("0"+s%60).slice(-2)}
 function toast(m){var t=$("toast");t.textContent=m;t.style.display="block";clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display="none"},3500)}
-function mk(o){o.title=o.title||"Sin título";o.artist=o.artist&&o.artist!="<unknown>"?o.artist:"Artista desconocido";o.album=o.album&&o.album!="<unknown>"?o.album:"Álbum desconocido";o.nt=norm(o.title);o.na=norm(o.artist);o.k=o.k||o.nt+"|"+o.na;o.genre=(o.genre&&o.genre!="<unknown>")?o.genre:"";o.added=+o.added||0;if(o.mid)o.art="https://tb.local/c/"+o.mid;else o.art=o.art||"";return o}
-function setLib(a){var seen={};lib=a.filter(function(t){if(seen[t.k])return false;return seen[t.k]=1}).sort(function(x,y){return x.title.localeCompare(y.title)});render()}
+function mk(o){o.title=o.title||"Sin título";o.artist=o.artist&&o.artist!="<unknown>"?o.artist:"Artista desconocido";o.album=o.album&&o.album!="<unknown>"?o.album:"Álbum desconocido";o.nt=norm(o.title);o.na=norm(o.artist);o.k=o.nt+"|"+o.na;o.genre=(o.genre&&o.genre!="<unknown>")?o.genre:"";o.added=+o.added||0;o.art=o.mid?"https://tb.local/c/"+o.mid:"";return o}
+function libSig(a){var h=0;a.forEach(function(t){var x=(t.mid||"")+t.k;for(var i=0;i<x.length;i++)h=(h*31+x.charCodeAt(i))|0});return a.length+":"+h}
+function setLib(a){var seen={},n=a.filter(function(t){if(seen[t.k])return false;return seen[t.k]=1}).sort(function(x,y){return x.title.localeCompare(y.title)});if(lib.length&&libSig(n)==libSig(lib))return false;lib=n;render();return true}
+function saveLib(){try{localStorage.setItem("tb4lib",JSON.stringify(lib.filter(function(t){return t.mid}).map(function(t){return[t.mid,t.title,t.artist,t.album,t.dur,t.added,t.genre]})))}catch(e){}}
+function loadLib(){try{return(JSON.parse(localStorage.getItem("tb4lib")||"[]")).map(function(a){return mk({mid:a[0],title:a[1],artist:a[2],album:a[3],dur:a[4],added:a[5],genre:a[6],src:"https://tb.local/a/"+a[0]})})}catch(e){return[]}}
 function find(t,a){var nt=norm(t),na=norm(a||"");return lib.filter(function(x){return x.nt==nt&&(!na||x.na.indexOf(na)>-1||na.indexOf(x.na)>-1)})[0]||lib.filter(function(x){return x.nt==nt})[0]||null}
 
 /* Scan the device (Android MediaStore) or pick audio files (browser) */
-window.scanNative=function(){if(!AN)return;try{var a=JSON.parse(Android.scan());setLib(a.map(function(o){o.src="https://tb.local/a/"+o.mid;return mk(o)}));toast(a.length+" canciones encontradas en el dispositivo")}catch(e){toast("No se pudo escanear. Revisa el permiso de audio")}};
+window.scanNative=function(quiet){if(!AN)return;try{var a=JSON.parse(Android.scan());
+  if(!a.length&&lib.length){if(!quiet)toast("No se pudo leer el dispositivo. Mostrando tu última biblioteca; revisa el permiso de audio");return}
+  var ch=setLib(a.map(function(o){o.src="https://tb.local/a/"+o.mid;return mk(o)}));if(ch)saveLib();
+  if(!quiet)toast(lib.length+" canciones en tu biblioteca");else if(ch)toast("Biblioteca actualizada: "+lib.length+" canciones")}catch(e){if(!quiet)toast("No se pudo escanear. Revisa el permiso de audio")}};
 function addFiles(fs){var a=lib.slice();fs.forEach(function(f){if(!/^audio\//.test(f.type)&&!/\.(mp3|m4a|aac|flac|wav|ogg|opus)$/i.test(f.name))return;var n=f.name.replace(/\.[^.]+$/,""),p=n.split(" - ");a.push(mk({title:p.length>1?p.slice(1).join(" - "):n,artist:p.length>1?p[0]:"",album:"",added:Math.round((f.lastModified||0)/1000),src:URL.createObjectURL(f)}))});setLib(a);toast("Biblioteca: "+lib.length+" canciones")}
 
 /* CSV + JSON import: builds playlists and matches rows against the scanned library */
@@ -222,9 +211,9 @@ var IO=window.IntersectionObserver?new IntersectionObserver(function(es){es.forE
 function obs(){if(IO)document.querySelectorAll(".mr").forEach(function(e){IO.observe(e)})}
 function shelf(a,cls){var l=lst(a);return '<div class="shelf">'+a.map(function(t,i){return '<div class="sc '+(cls||"")+'" data-p="'+l+'_'+i+'">'+cover(t.album,"",t)+'<div class="t" style="margin-top:6px;font-weight:600">'+esc(t.title)+'</div><div class="a">'+esc(t.artist)+'</div></div>'}).join("")+'</div>'}
 function uniq(f){var m={};lib.forEach(function(t){var k=f=="genre"?gen(t):t[f];(m[k]=m[k]||[]).push(t)});return m}
-function plTracks(p){return p.items.map(function(i){return i.stream?mk(Object.assign({},i.stream)):find(i.t,i.a)}).filter(Boolean)}
+function plTracks(p){return p.items.map(function(i){return find(i.t,i.a)}).filter(Boolean)}
 function colOf(o){if(o.t=="album")return{n:o.k,s:"Álbum",tr:srt(lib.filter(function(x){return x.album==o.k}))};if(o.t=="genre")return{n:o.k,s:"Género",tr:srt(lib.filter(function(x){return gen(x)==o.k}))};if(o.t=="artist")return{n:o.k,s:"Artista",tr:srt(lib.filter(function(x){return x.artist==o.k}))};
-  if(o.t=="fav")return{n:"Canciones que te gustan",s:"Playlist",tr:srt(lib.filter(function(x){return likes[x.k]}).concat(Object.keys(streamSaved).map(function(k){return streamSaved[k]}).filter(function(x){return likes[x.k]})))};var p=lists[o.k];return{n:p.name,s:"Playlist · "+p.items.length+" elementos",tr:plTracks(p)}}
+  if(o.t=="fav")return{n:"Canciones que te gustan",s:"Playlist",tr:srt(lib.filter(function(x){return likes[x.k]}))};var p=lists[o.k];return{n:p.name,s:"Playlist · "+p.items.length+" elementos",tr:plTracks(p)}}
 function greet(){var h=new Date().getHours();return h<12?"Buenos días":h<20?"Buenas tardes":"Buenas noches"}
 function rowL(t,a){return '<div class="row lk" '+a+'><div class="m"><div class="t">'+t+'</div></div><span class="chev">›</span></div>'}
 function rowF(t,a){return '<div class="row lk fr"><div class="m"><div class="t">'+t+'</div></div><span class="chev">›</span><input type="file" '+a+'></div>'}
@@ -233,40 +222,32 @@ function emptyHome(){return '<div class="card" style="text-align:center;padding:
 function render(){Ls=[];CTX=open?(open.t=="fav"?"Canciones que te gustan":open.t=="list"?(lists[open.k]||{}).name:open.k):tab=="search"?"Búsqueda":tab=="lib"?"Tu biblioteca":chip=="Todo"?"Inicio":chip;var h="",a;
   document.querySelectorAll("#nav button").forEach(function(b){b.classList.toggle("on",b.dataset.t==tab)});
   if(open){var c=colOf(open),l=lst(c.tr);h='<button class="bk" data-back="1">‹ Volver</button><div class="hero2">'+cover(c.n,"",c.tr[0])+'<h1>'+esc(c.n)+'</h1><div class="a">'+c.s+' · '+c.tr.length+' canciones</div></div><div class="pbtns"><button data-pl="'+l+'">▶ Reproducir</button><button data-pl="'+l+'s">⇄ Aleatorio</button></div>'+(open.t!="list"?seg("sort",[["az","A–Z"],["added","Recién añadidas"]]):'')+(open.t=="list"?'<div class="pbtns"><button data-pren="'+open.k+'">Renombrar</button><button data-pdel="'+open.k+'">Eliminar</button></div>':'')+list(c.tr)}
-  else if(tab=="set"){h=settingsView()}else if(tab=="search"){h='<h1>Buscar</h1><input type="text" id="q" placeholder="Canciones, artistas o álbumes" value="'+esc(q)+'"><div class="chips"><button data-media-mode="music" class="'+(mediaMode=="music"?"on":"")+'">Música</button><button data-media-mode="podcasts" class="'+(mediaMode=="podcasts"?"on":"")+'">Podcasts</button></div><div id="podbox" style="display:'+(mediaMode=="podcasts"?"block":"none")+'"><input type="text" id="podq" placeholder="Buscar podcasts en Apple Podcasts"><button class="pri" id="podsearch">Buscar podcasts</button><div id="podresults"></div></div><div class="card" id="pllinkbox"><b>Importar playlist desde enlace</b><input type="text" id="pllink" placeholder="Pega un enlace RSS, M3U, JSON o audio"><button class="pri" id="pllinkgo">Importar enlace</button><div class="a">Admite feeds RSS y listas públicas accesibles. Spotify y YouTube requieren sus APIs o reproducción oficial.</div></div><div id="res" style="display:'+(mediaMode=="music"?"block":"none")+'">'+res()+'</div>'}
-  else if(tab=="lib"){h=libView()}else{h='<div class="a" style="text-transform:uppercase;font-weight:600;letter-spacing:.5px;margin-top:6px">'+new Date().toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long"})+'</div><h1 style="margin-top:0">'+greet()+'</h1><div class="chips">'+["Todo","Artistas","Géneros","Álbumes"].map(function(g){return '<button data-chip="'+g+'" class="'+(g==chip?'on':'')+'">'+g+'</button>'}).join("")+'</div>';
+  else if(tab=="set"){h=settingsView()}else if(tab=="search"){h='<h1>Buscar</h1><input type="text" id="q" placeholder="Canciones, artistas o álbumes" value="'+esc(q)+'"><div id="res">'+res()+'</div>'}
+  else if(tab=="lib"){h=libView()}else{h='<div class="a" style="text-transform:uppercase;font-weight:600;letter-spacing:.5px;margin-top:6px">'+new Date().toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long"})+'</div><h1 style="margin-top:0">'+greet()+'</h1><div class="chips">'+["Todo","Canciones","Playlists","Artistas","Géneros","Álbumes"].map(function(g){return '<button data-chip="'+g+'" class="'+(g==chip?'on':'')+'">'+g+'</button>'}).join("")+'</div>';
     if(!lib.length)h+=emptyHome();
     else if(chip=="Todo"){var rec=recs();h+=(S.sec.rec&&rec.length?'<h3>Escuchado recientemente</h3>'+shelf(rec):'')+(S.sec.mix?mixes():'')+(S.sec.top?topH():'')+(S.sec.art?'<h3>Tus artistas</h3>'+shl(uniq("artist"),"artist"):'')+(S.sec.gen?'<h3>Tus géneros</h3>'+shl(uniq("genre"),"genre"):'')+(S.sec.alb?'<h3>Tus álbumes</h3>'+shl(uniq("album"),"album"):'')}
+    else if(chip=="Canciones")h+=seg("sort",[["az","A–Z"],["added","Recién añadidas"]])+list(srt(lib));
+    else if(chip=="Playlists")h+=lists.length?lists.map(function(p,i){return '<div class="row">'+cover(p.name)+'<div class="m" data-open="list_'+i+'"><div class="t">'+esc(p.name)+'</div><div class="a">'+p.items.length+' elementos</div></div></div>'}).join(""):'<div class="empty">Sin playlists.</div>';
     else{var t=chip=="Artistas"?"artist":chip=="Géneros"?"genre":"album",m=uniq(t);h+=seg("sort",[["az","A–Z"],["added","Recién añadidas"]])+ks(m).map(function(k){return '<div class="row">'+cover(k,"",m[k][0])+'<div class="m" data-open="'+t+'_'+esc(k)+'"><div class="t">'+esc(k)+'</div><div class="a">'+m[k].length+' canciones</div></div></div>'}).join("")}}
-  $("main").innerHTML=h;obs();if(tab=="search"&&!open)onlineSearch()}
-function res(){if(!q){var gg=uniq("genre");resN=0;return lib.length?'<h3>Explorar todo</h3><div class="grid">'+ks(gg).map(function(k){return '<div class="tile" data-open="genre_'+esc(k)+'" style="background:'+bg(k)+';color:#fff;height:96px;align-items:flex-end;padding-bottom:10px;border-radius:14px"><b style="padding:0 12px;font-size:17px">'+esc(k)+'</b></div>'}).join("")+'</div>':'<div class="empty">Primero agrega música.</div>'}var k=q.toLowerCase(),a=lib.filter(function(t){return(t.title+" "+t.artist+" "+t.album).toLowerCase().indexOf(k)>-1});resN=a.length;return(a.length?list(a):"")+'<div id="streambox"></div>'}
+  $("main").innerHTML=h;obs()}
+function res(){if(!q){var gg=uniq("genre");return lib.length?'<h3>Explorar todo</h3><div class="grid">'+ks(gg).map(function(k){return '<div class="tile" data-open="genre_'+esc(k)+'" style="background:'+bg(k)+';color:#fff;height:96px;align-items:flex-end;padding-bottom:10px;border-radius:14px"><b style="padding:0 12px;font-size:17px">'+esc(k)+'</b></div>'}).join("")+'</div>':'<div class="empty">Primero agrega música.</div>'}var k=q.toLowerCase();return list(lib.filter(function(t){return(t.title+" "+t.artist+" "+t.album).toLowerCase().indexOf(k)>-1}))}
 var NI={home:'<path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/>',lib:'<path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/>',set:'<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'};
-$("nav").innerHTML=[["home","Inicio"],["search","Buscar"],["lib","Biblioteca"],["set","Ajustes"]].map(function(x){return '<button data-t="'+x[0]+'"><svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NI[x[0]]+'</svg>'+x[1]+'</button>'}).join("");
+$("nav").innerHTML=[["home","Inicio"],["search","Buscar"],["lib","Tu biblioteca"],["set","Ajustes"]].map(function(x){return '<button data-t="'+x[0]+'"><svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+NI[x[0]]+'</svg>'+x[1]+'</button>'}).join("");
 $("nav").onclick=function(e){var b=e.target.closest("button");if(!b)return;tab=b.dataset.t;open=null;render();scrollTo(0,0)};
-window.goBack=function(){if($("ly").classList.contains("show")){$("ly").classList.remove("show");return true}if($("sheet").classList.contains("show")){closeSheet();return true}if($("np").classList.contains("show")){closeNP();return true}if(open){open=null;render();return true}if(tab!="home"){tab="home";render();return true}return false};
+window.goBack=function(){if($("ly").classList.contains("show")){$("ly").classList.remove("show");return true}if($("sheet").classList.contains("show")){closeSheet();return true}if($("np").classList.contains("show")){$("np").classList.remove("show");return true}if(open){open=null;render();return true}if(tab!="home"){tab="home";render();return true}return false};
 $("main").oninput=function(e){var i=e.target;
-  if(i.id=="podq"){return}if(i.id=="q"){q=i.value;Ls=[];$("res").innerHTML=res();obs();onlineSearch();return}
+  if(i.id=="repo"){S.repo=i.value.trim();svS();return}
+  if(i.id=="q"){q=i.value;$("res").innerHTML=res();obs();return}
   if(i.dataset.c){S.ac=i.value;applyS();svS();return}
   if(i.dataset.r){var k=i.dataset.r,v=+i.value;if(/^eq\d/.test(k))S.eq[+k[2]]=v;else S[k]=v;if(k=="vol")setVol(v);applyS();svS();var l=$("v_"+k);if(l)l.textContent=v+(k=="rad"?"px":(k=="fs"||k=="cvInt"||k=="vol")?"%":" dB")}};
 $("main").onclick=function(e){var t=e.target,g;
-  if(g=t.closest("[data-media-mode]")){mediaMode=g.dataset.mediaMode;render();return}
-  if(t.closest("#podsearch")){podcastSearch();return}
-  if(t.closest("#pllinkgo")){importPlaylistLink($("pllink").value);return}
-  if(g=t.closest("[data-pod-open]")){var p=podcastItems[+g.dataset.podOpen];if(p&&p.feedUrl)podcastLoadRSS(p.feedUrl,+g.dataset.podOpen);else if(p&&p.collectionId){podcastActiveIndex=+g.dataset.podOpen;fetch("https://itunes.apple.com/lookup?id="+p.collectionId+"&entity=podcastEpisode&limit=200").then(function(r){return r.json()}).then(function(d){var rr=(d.results||[]).filter(function(x){return x.episodeUrl});podcastEpisodes=rr.map(function(x){return {title:x.trackName,url:x.episodeUrl,date:x.releaseDate||"",type:""}});var b=$("podresults");b.innerHTML='<button data-pod-back="1">‹ Programas</button><h3>'+esc(p.collectionName||"Podcast")+'</h3>'+podcastEpisodes.map(function(ep,i){return '<div class="row"><div class="cv">▶</div><div class="m"><div class="t">'+esc(ep.title)+'</div><div class="a">'+esc(ep.date)+'</div></div><button data-pod-play="'+i+'">▶</button><button data-pod-save="'+i+'">↓</button></div>'}).join("")}).catch(function(){toast("No se pudieron consultar episodios")})}return}
-  if(t.closest("[data-pod-back]")){podcastSearch();return}
-  if(g=t.closest("[data-pod-play]")){podcastPlay(+g.dataset.podPlay);return}
-  if(g=t.closest("[data-pod-save]")){podcastSave(+g.dataset.podSave);return}
+  if(t.closest("[data-upd]")){checkUpdate();return}
   if(g=t.closest("[data-lchip]")){libChip=g.dataset.lchip;render();return}
   if(t.closest("[data-lgrid]")){S.libGrid=!S.libGrid;svS();render();return}
   if(g=t.closest("[data-set]")){var kv=g.dataset.set.split(":");S[kv[0]]=kv[1];applyS();svS();setCI();render();return}
   if(g=t.closest("[data-ac]")){S.ac=g.dataset.ac;applyS();svS();render();return}
   if(g=t.closest("[data-tg]")){var pp=g.dataset.tg;if(pp.indexOf("sec.")==0)S.sec[pp.slice(4)]=S.sec[pp.slice(4)]?0:1;else S[pp]=!S[pp];applyS();svS();render();return}
   if(g=t.closest("[data-eqp]")){S.eq=g.dataset.eqp.split(",").map(Number);applyS();svS();render();return}
-  if(g=t.closest("[data-ext]")){openExt(g.dataset.ext);return}
-  if(t.closest("[data-goset]")){tab="set";open=null;render();scrollTo(0,0);return}
-  if(g=t.closest("[data-stream-add]")){var st=streamResults[+g.dataset.streamAdd];if(st){if(!queue.length)play([st],0);else{queue.push(st);toast("Añadida a la cola")}}return}
-  if(t.closest("[data-upd]")){checkUpd();return}
-  if(t.closest("[data-updgo]")){if(updUrl)openExt(updUrl);return}
   if(t.closest("[data-prefetch]")){prefetch();return}
   if(t.closest("[data-clrart]")){if(AN)try{Android.clearCache()}catch(x){}AC={};AR={};try{localStorage.removeItem("tb4art");localStorage.removeItem("tb4ar")}catch(x){}lib.forEach(function(x){x.art=x.mid?"https://tb.local/c/"+x.mid:""});toast("Caché borrada");return}
   if(t.closest("[data-reset]")){try{localStorage.removeItem("tb4s")}catch(x){}location.reload();return}
@@ -286,73 +267,57 @@ $("main").onclick=function(e){var t=e.target,g;
 
 /* Sheets: track menu, new playlist, queue */
 function closeSheet(){$("sheet").classList.remove("show")}$("sheet").onclick=function(e){if(e.target==this)closeSheet()};
-var tselTrack=null;function sheetT(k,fallback){tsel=k;var t=lib.filter(function(x){return x.k==k})[0]||streamSaved[k]||fallback||null;if(!t)return;tselTrack=t;
-  $("sb").innerHTML='<b>'+esc(t.title)+'</b><div class="a" style="margin-bottom:8px">'+esc(t.artist)+'</div><button data-s="q">Añadir a la cola</button><button data-s="n">Reproducir a continuación</button><button data-s="f">'+(likes[k]?'Quitar de favoritas':'Añadir a favoritas')+'</button><div class="a" style="margin:8px 0 2px">Añadir a playlist</div>'+lists.map(function(p,i){return '<button data-s="p'+i+'">'+esc(p.name)+'</button>'}).join("")+'<button data-s="np" class="pri">＋ Nueva playlist</button>'+(t.provider?'<button data-s="credits">Créditos y licencia</button>':'')+(open&&open.t=="list"?'<button data-s="rm">Quitar de esta playlist</button>':'');$("sheet").classList.add("show")}
+function sheetT(k){tsel=k;var t=lib.filter(function(x){return x.k==k})[0];if(!t)return;
+  $("sb").innerHTML='<b>'+esc(t.title)+'</b><div class="a" style="margin-bottom:8px">'+esc(t.artist)+'</div><button data-s="q">Añadir a la cola</button><button data-s="n">Reproducir a continuación</button><button data-s="f">'+(likes[k]?'Quitar de favoritas':'Añadir a favoritas')+'</button><div class="a" style="margin:8px 0 2px">Añadir a playlist</div>'+lists.map(function(p,i){return '<button data-s="p'+i+'">'+esc(p.name)+'</button>'}).join("")+'<button data-s="np" class="pri">＋ Nueva playlist</button>'+(open&&open.t=="list"?'<button data-s="rm">Quitar de esta playlist</button>':'');$("sheet").classList.add("show")}
 function sheetNew(k){$("sb").innerHTML='<b>Nueva playlist</b><input type="text" id="pn" placeholder="Nombre"><button class="pri" id="pc" data-k="'+(k||"")+'">Crear</button>';$("sheet").classList.add("show");setTimeout(function(){$("pn").focus()},60)}
-$("sb").onclick=function(e){var b=e.target.closest("button");if(!b)return;if(b.dataset.ext){openExt(b.dataset.ext);return}var s=b.dataset.s,t=tselTrack||lib.filter(function(x){return x.k==tsel})[0];
-  if(b.id=="lys"){var tx=$("lyTa").value,t0=queue[qi];if(tx.trim()&&t0){LY[t0.k]=tx;delete LP[t0.k];saveLY();lyBuild()}closeSheet();return}if(b.id=="prc"){var nn=$("pn").value.trim();if(nn){lists[+b.dataset.i].name=nn;sv()}closeSheet();render();return}if(b.id=="pc"){var n=$("pn").value.trim();if(!n)return;var p={name:n,items:[]},k=b.dataset.k,x=k&&lib.filter(function(y){return y.k==k})[0]||tselTrack;if(x){var item={t:x.title,a:x.artist};if(x.provider)item.stream={title:x.title,artist:x.artist,album:x.album,dur:x.dur,src:x.src,art:x.art,k:x.k,provider:x.provider,license:x.license,sourceUrl:x.sourceUrl};p.items.push(item)}lists.push(p);sv();closeSheet();render();return}
-  if(s=="credits"&&t){$("sb").innerHTML='<b>Créditos</b><div class="a" style="margin:8px 0">'+esc(t.title)+' — '+esc(t.artist)+'</div><div class="a" style="margin:8px 0;word-break:break-word">Licencia: '+esc(t.license||"Consulta la ficha original")+'</div><button data-ext="'+esc(t.sourceUrl||"https://archive.org/")+'">Consultar ficha y licencia</button><button data-s="backcredits">Volver</button>';return}
-  if(s=="backcredits"){sheetT(tsel,tselTrack);return}
+$("sb").onclick=function(e){var b=e.target.closest("button");if(!b)return;var nn=b.dataset.n,uu=b.dataset.u;
+  if(uu){if(AN)try{Android.openUrl(uu)}catch(x){}else window.open(uu);closeSheet();return}
+  if(nn){if(nn=="out"){try{Android.openOutput()}catch(x){}closeSheet()}else if(nn=="spd"){$("bsp").click();sheetNP()}else if(nn=="slp"){$("bsl").click();sheetNP()}else if(nn=="cvon"){$("bcv").click();sheetNP()}else if(nn=="cvsrc"){$("bcs").click();sheetNP()}else if(nn=="trk"){if(queue[qi])sheetT(queue[qi].k)}return}
+  var s=b.dataset.s,t=lib.filter(function(x){return x.k==tsel})[0];
+  if(b.id=="lys"){var tx=$("lyTa").value,t0=queue[qi];if(tx.trim()&&t0){LY[t0.k]=tx;delete LP[t0.k];saveLY();lyBuild()}closeSheet();return}if(b.id=="prc"){var nn=$("pn").value.trim();if(nn){lists[+b.dataset.i].name=nn;sv()}closeSheet();render();return}if(b.id=="pc"){var n=$("pn").value.trim();if(!n)return;var p={name:n,items:[]},k=b.dataset.k,x=k&&lib.filter(function(y){return y.k==k})[0];if(x)p.items.push({t:x.title,a:x.artist});lists.push(p);sv();closeSheet();render();return}
   if(!s)return;
   if(s=="q"){queue.push(t);toast("Añadida a la cola")}else if(s=="n"){queue.splice(qi+1,0,t);toast("Sonará a continuación")}
   else if(s=="f"){likes[tsel]?delete likes[tsel]:likes[tsel]=1;sv();ui()}
   else if(s=="np"){sheetNew(tsel);return}else if(s=="rm"){var pl=lists[open.k];pl.items=pl.items.filter(function(z){return norm(z.t)!=t.nt});sv()}
-  else if(s[0]=="p"){var p=lists[+s.slice(1)];if(!p.items.some(function(z){return norm(z.t)==t.nt&&norm(z.a)==t.na})){var item={t:t.title,a:t.artist};if(t.provider)item.stream={title:t.title,artist:t.artist,album:t.album,dur:t.dur,src:t.src,art:t.art,k:t.k,provider:t.provider,license:t.license,sourceUrl:t.sourceUrl};p.items.push(item)}sv();toast("Añadida a "+p.name)}
+  else if(s[0]=="p"){var p=lists[+s.slice(1)];if(!p.items.some(function(z){return norm(z.t)==t.nt}))p.items.push({t:t.title,a:t.artist});sv();toast("Añadida a "+p.name)}
   closeSheet();render()};
-function xt(id){return({bsp:"Velocidad: ",bcs:"Fondo del canvas: "}[id]||"")+$(id).textContent}
-$("nmo").onclick=function(){var t=queue[qi];if(!t)return;
-  sheetT(t.k,t);$("sb").insertAdjacentHTML("beforeend",'<div class="a" style="margin:12px 0 2px">Reproductor</div>'+["bsp","bsl","bcv","bcs"].map(function(i){return '<button data-x="'+i+'">'+esc(xt(i))+'</button>'}).join(""))};
-document.addEventListener("click",function(e){var g=e.target.closest("[data-x]");if(g&&$("sb").contains(g)){$(g.dataset.x).click();g.textContent=xt(g.dataset.x)}});
-function devName(){try{if(AN&&typeof Android.outputDevice=="function"){var n=Android.outputDevice();if(n)return String(n)}}catch(e){}return"Este teléfono"}
-function devSheet(){var n=devName();$("sb").innerHTML='<b>Reproduciendo en</b><div class="row" style="margin-top:8px"><div class="cv" style="background:var(--ac);color:var(--acx,#fff)"><span style="width:26px;height:26px;display:block">'+ICO.dev+'</span></div><div class="m" style="cursor:default"><div class="t" style="color:var(--ac)">'+esc(n)+'</div><div class="a">Dispositivo actual</div></div></div><div id="dvl"></div><div class="a" style="margin-top:10px">Para cambiar a Bluetooth o auriculares usa la salida de audio de Android (panel de ajustes rápidos).</div>';$("sheet").classList.add("show");
-  try{navigator.mediaDevices.enumerateDevices().then(function(l){var o=l.filter(function(d){return d.kind=="audiooutput"&&d.label&&d.label!=n&&d.deviceId!="default"&&d.deviceId!="communications"});if(o.length&&$("dvl"))$("dvl").innerHTML=o.map(function(d){return '<div class="row"><div class="m" style="cursor:default"><div class="t">'+esc(d.label)+'</div><div class="a">Disponible</div></div></div>'}).join("")}).catch(function(){})}catch(e){}}
-$("bdv").onclick=devSheet;$("bly").onclick=lyOpen;
+$("nmo").onclick=function(){sheetNP()};
 $("bq").onclick=function(){var up=queue.slice(qi+1);$("sb").innerHTML='<b>Cola</b><div class="a">Sonando: '+esc(queue[qi]?queue[qi].title:"")+'</div>'+(up.length?up.slice(0,60).map(function(t,i){return '<div class="row">'+cover(t.album,"",t)+'<div class="m" data-jq="'+(qi+1+i)+'"><div class="t">'+esc(t.title)+'</div><div class="a">'+esc(t.artist)+'</div></div></div>'}).join(""):'<div class="empty">No hay más canciones en la cola.</div>');$("sheet").classList.add("show")};
 document.addEventListener("click",function(e){var g=e.target.closest("[data-jq]");if(g&&$("sb").contains(g)){qi=+g.dataset.jq;load();closeSheet()}});
 
 /* Player */
 function play(a,i){queue=a.slice();qi=i;queueCtx=CTX;load()}
-function load(){var t=queue[qi];if(!t)return;
-  au.pause();au.src=t.src;au.playbackRate=speed;au.load();au.play().catch(function(){toast("No se pudo reproducir esta canción")});
+function load(){var t=queue[qi];if(!t)return;au.src=t.src;au.playbackRate=speed;au.play().catch(function(){toast("No se pudo reproducir este archivo")});
   recents=[t.k].concat(recents.filter(function(k){return k!=t.k})).slice(0,30);plays[t.k]=(plays[t.k]||0)+1;sv();meta();ui();setCI();hilite()}
-function curN(t){return au.currentTime||0}
-function durN(t){return au.duration||(t&&t.dur)||0}
-function pausedN(t){return au.paused}
-function seekTo(x){if(queue[qi])au.currentTime=x}
 function toggle(){if(!queue[qi]){if(lib.length)play(lib,0);else toast("Primero agrega música");return}au.paused?au.play():au.pause()}
 function next(){if(!queue.length)return;qi=shuf&&queue.length>1?(function(){var n;do{n=Math.floor(Math.random()*queue.length)}while(n==qi);return n})():(qi+1)%queue.length;load()}
-function prev(){if(!queue.length)return;if(curN(queue[qi])>3){seekTo(0);return}qi=(qi-1+queue.length)%queue.length;load()}
+function prev(){if(!queue.length)return;if(au.currentTime>3){au.currentTime=0;return}qi=(qi-1+queue.length)%queue.length;load()}
 au.onseeked=function(){pushNow()};au.onplay=au.onpause=function(){playing=!au.paused;pushNow();ui()};
-au.onended=function(){if(rep){au.currentTime=0;au.play()}else next()};au.ontimeupdate=function(){tick();var ct=queue[qi];if(ct&&ct.podcastUrl){podcastPos[ct.podcastUrl]=au.currentTime;try{localStorage.setItem("sb_podcast_pos",JSON.stringify(podcastPos))}catch(e){}}};au.onerror=function(){toast("Formato no compatible. Saltando…");setTimeout(next,600)};
+au.onended=function(){if(rep){au.currentTime=0;au.play()}else next()};au.ontimeupdate=tick;au.onerror=function(){toast("Formato no compatible. Saltando…");setTimeout(next,600)};
 function meta(){if(!("mediaSession" in navigator)||!queue[qi])return;var t=queue[qi];try{navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist,album:t.album,artwork:t.art?[{src:t.art}]:[]});
   var m=navigator.mediaSession;m.setActionHandler("play",toggle);m.setActionHandler("pause",toggle);m.setActionHandler("nexttrack",next);m.setActionHandler("previoustrack",prev);m.setActionHandler("seekto",function(d){au.currentTime=d.seekTime})}catch(e){}}
-function ui(){var t=queue[qi];$("mini").style.display=t?"flex":"none";if(!t)return;var d=durN(t),c=curN(t),lk=likes[t.k],h=hue(t.album),pz=pausedN(t);
-  $("bdn").textContent=devName();$("mt").textContent=$("nt").textContent=t.title;$("ma").textContent=$("na").textContent=t.artist;$("nal").textContent=queueCtx||t.album;
+function ui(){var t=queue[qi];$("mini").style.display=t?"flex":"none";if(!t)return;var d=au.duration||t.dur||0,c=au.currentTime||0,lk=likes[t.k],h=hue(t.album);
+  $("mt").textContent=$("nt").textContent=t.title;$("ma").textContent=$("na").textContent=t.artist;$("nal").textContent=queueCtx||t.album;
   if(npK!=t.k+t.art){npK=t.k+t.art;var hh=hue(t.album);$("lyT1").textContent=t.title;$("lyA1").textContent=t.artist;$("ly").style.background="linear-gradient(180deg,hsl("+hh+",52%,38%),hsl("+hh+",58%,20%))";$("lyc").style.background="hsl("+hh+",45%,34%)";npCards();if(lyK!=t.k)lyBuild()}
-  if(lp!==pz){lp=pz;$("mp").innerHTML=$("np2").innerHTML=$("lpl").innerHTML=pz?ICO.play:ICO.pause}$("mh").style.display=$("nh").style.display="";$("mh").textContent=$("nh").textContent=lk?"♥":"♡";$("mh").className="ib"+(lk?" on-h":"");$("nh").style.color=lk?"var(--ac)":"#fff";
+  if(lp!==au.paused){lp=au.paused;$("mp").innerHTML=$("np2").innerHTML=$("lpl").innerHTML=au.paused?ICO.play:ICO.pause}$("mh").textContent=$("nh").textContent=lk?"♥":"♡";$("mh").className="ib"+(lk?" on-h":"");$("nh").style.color=lk?"var(--ac)":"#fff";
   $("mcv").style.background=$("art").style.background=bg(t.album);var sk=t.k+t.art;if($("art").dataset.s!=sk){$("art").dataset.s=sk;var lt=esc((t.title[0]||"?").toUpperCase()),im=t.art?'<img src="'+t.art+'" data-k="'+esc(t.k)+'" onerror="artErr(this)">':'';$("mcv").innerHTML=lt+im;$("art").innerHTML=lt+im}
   $("mpb").style.width=(d?c/d*100:0)+"%";if(!drag)$("sc").value=d?c/d*1000:0;$("tc").textContent=fmt(c);$("td").textContent=fmt(d);
-  if(!cvOn)$("art").style.transform=pz?"scale(.86)":"none";$("ns").style.color=shuf?"var(--ac)":"#fff";$("nr").style.color=rep?"var(--ac)":"#fff"}
+  if(!cvOn)$("art").style.transform=au.paused?"scale(.86)":"none";$("ns").style.color=shuf?"var(--ac)":"#fff";$("nr").style.color=rep?"var(--ac)":"#fff"}
 $("mp").onclick=$("np2").onclick=toggle;$("nx").onclick=next;$("npv").onclick=prev;
 $("ns").onclick=function(){shuf=!shuf;ui()};$("nr").onclick=function(){rep=!rep;ui()};
 $("mh").onclick=$("nh").onclick=function(){var t=queue[qi];if(!t)return;likes[t.k]?delete likes[t.k]:likes[t.k]=1;sv();ui()};
-$("mtx").onclick=$("mcv").onclick=function(){$("np").classList.add("show");rs();startDraw()};$("npx").onclick=closeNP;
-$("sc").oninput=function(){drag=true;$("tc").textContent=fmt(this.value/1000*durN(queue[qi]))};$("sc").onchange=function(){drag=false;var d=durN(queue[qi]);if(d)seekTo(this.value/1000*d)};
-var swipeStart=null;
-$("art").addEventListener("pointerdown",function(e){swipeStart={x:e.clientX,y:e.clientY,id:e.pointerId};});
-$("art").addEventListener("pointerup",function(e){if(!swipeStart||swipeStart.id!==e.pointerId)return;var dx=e.clientX-swipeStart.x,dy=e.clientY-swipeStart.y;swipeStart=null;if(Math.abs(dx)>58&&Math.abs(dx)>Math.abs(dy)*1.25){if(dx<0)next();else prev()}});
-$("art").addEventListener("pointercancel",function(){swipeStart=null});
-
+$("mtx").onclick=$("mcv").onclick=function(){$("np").classList.add("show");rs()};$("npx").onclick=function(){$("np").classList.remove("show")};
+$("sc").oninput=function(){drag=true;$("tc").textContent=fmt(this.value/1000*(au.duration||0))};$("sc").onchange=function(){drag=false;if(au.duration)au.currentTime=this.value/1000*au.duration};
 $("bsp").onclick=function(){speed=speed==1?1.25:speed==1.25?1.5:speed==1.5?.75:1;au.playbackRate=speed;this.textContent=speed+"×"};
 $("bsl").onclick=function(){sleepM=sleepM==0?15:sleepM==15?30:sleepM==30?60:0;clearTimeout(sleepH);if(sleepM)sleepH=setTimeout(function(){au.pause();sleepM=0;$("bsl").textContent="Temporizador"},sleepM*60000);this.textContent=sleepM?"Apagar en "+sleepM+" min":"Temporizador"};
-$("bcv").onclick=function(){cvOn=!cvOn;S.cvOn=cvOn;svS();this.textContent="Canvas "+(cvOn?"✓":"✗");if(cvOn)startDraw();else stopDraw()};
+$("bcv").onclick=function(){cvOn=!cvOn;S.cvOn=cvOn;svS();this.textContent="Canvas "+(cvOn?"✓":"✗")};
 
 /* Canvas: generative visuals that react to the music (Web Audio analyser) */
 var cv=$("cvs"),cx=cv.getContext("2d"),ac=null,an=null,fd=null,tt=0;
 function rs(){cv.width=Math.round(innerWidth*.5);cv.height=Math.round(innerHeight*.5)}addEventListener("resize",rs);
 au.addEventListener("play",function(){if(ac)return;try{var C=window.AudioContext||window.webkitAudioContext;ac=new C();var s=ac.createMediaElementSource(au);lo=ac.createBiquadFilter();lo.type="lowshelf";lo.frequency.value=200;mi=ac.createBiquadFilter();mi.type="peaking";mi.frequency.value=1000;mi.Q.value=1;hi=ac.createBiquadFilter();hi.type="highshelf";hi.frequency.value=4000;an=ac.createAnalyser();an.fftSize=128;fd=new Uint8Array(an.frequencyBinCount);s.connect(lo);lo.connect(mi);mi.connect(hi);hi.connect(an);an.connect(ac.destination);applyEQ()}catch(e){ac=null}});
-var lastT=0,drawRAF=0,drawActive=false;function draw(ts){drawRAF=0;if(document.hidden||!$("np").classList.contains("show")){drawActive=false;return}if(ts-lastT<33){drawRAF=requestAnimationFrame(draw);return}lastT=ts;var w=cv.width,H=cv.height,t=queue[qi];cx.globalCompositeOperation="source-over";cx.globalAlpha=1;cx.fillStyle="#121212";cx.fillRect(0,0,w,H);if(!cvOn||!t)return;
-  var b=0,I=S.cvInt/100,live=an&&!au.paused,i;if(live){an.getByteFrequencyData(fd);for(i=0;i<8;i++)b+=fd[i];b=b/8/255}else if(!pausedN(t))b=.25+.15*Math.sin(tt*6);bass+=(b-bass)*.25;tt+=.012+bass*.06;
+var lastT=0;function draw(ts){requestAnimationFrame(draw);if(document.hidden||!$("np").classList.contains("show")||ts-lastT<33)return;lastT=ts;var w=cv.width,H=cv.height,t=queue[qi];cx.globalCompositeOperation="source-over";cx.globalAlpha=1;cx.fillStyle="#121212";cx.fillRect(0,0,w,H);if(!cvOn||!t)return;
+  var b=0,I=S.cvInt/100,live=an&&!au.paused,i;if(live){an.getByteFrequencyData(fd);for(i=0;i<8;i++)b+=fd[i];b=b/8/255}else if(!au.paused)b=.25+.15*Math.sin(tt*6);bass+=(b-bass)*.25;tt+=.012+bass*.06;
   var h=hue(t.artist);
   if(CIok&&CI.naturalWidth){var iw=CI.naturalWidth,ih=CI.naturalHeight,sc=Math.max(w/iw,H/ih)*(1.12+bass*.06*I),dw=iw*sc,dh=ih*sc;cx.globalAlpha=.9;cx.drawImage(CI,(w-dw)/2+Math.sin(tt*.8)*w*.03,(H-dh)/2+Math.cos(tt*.6)*H*.02,dw,dh);cx.globalAlpha=1}
   var g=cx.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(0,0,0,.35)");g.addColorStop(.55,"rgba(0,0,0,.25)");g.addColorStop(1,"rgba(0,0,0,.88)");cx.fillStyle=g;cx.fillRect(0,0,w,H);
@@ -360,10 +325,7 @@ var lastT=0,drawRAF=0,drawActive=false;function draw(ts){drawRAF=0;if(document.h
   if(S.cvStyle=="bars"&&live){var n=fd.length,bw=w/n;for(i=0;i<n;i++){var v=fd[i]/255*H*.3*I;cx.fillStyle="hsla("+(h+i*3)+",85%,60%,.75)";cx.fillRect(i*bw+1,H-v,bw-2,v)}}
   else if(S.cvStyle=="ring"&&live){var n2=fd.length,R=w*.3,cy=H*.4;cx.lineWidth=2;for(i=0;i<n2;i++){var a=i/n2*6.283+tt,l=fd[i]/255*w*.18*I;cx.strokeStyle="hsla("+(h+i*3)+",85%,62%,.8)";cx.beginPath();cx.moveTo(w/2+Math.cos(a)*R,cy+Math.sin(a)*R);cx.lineTo(w/2+Math.cos(a)*(R+l),cy+Math.sin(a)*(R+l));cx.stroke()}}
   else{for(var k=0;k<5;k++){var x=w*(.5+.4*Math.sin(tt*(.6+k*.21)+k)),y=H*(.5+.4*Math.cos(tt*(.5+k*.17)+k*2)),r=w*(.3+.4*bass*I+.04*k),gr=cx.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,"hsla("+(h+k*28)+",85%,55%,"+(.35*I)+")");gr.addColorStop(1,"hsla("+(h+k*28)+",85%,55%,0)");cx.fillStyle=gr;cx.fillRect(0,0,w,H)}}
-  $("art").style.transform="scale("+(pausedN(t)?.86:1+bass*.05)+")";if(!document.hidden&&$("np").classList.contains("show"))drawRAF=requestAnimationFrame(draw);else drawActive=false}
-function startDraw(){if(drawActive||document.hidden||!$("np").classList.contains("show"))return;drawActive=true;lastT=0;drawRAF=requestAnimationFrame(draw)}
-function stopDraw(){drawActive=false;if(drawRAF){cancelAnimationFrame(drawRAF);drawRAF=0}}
-document.addEventListener("visibilitychange",function(){if(document.hidden)stopDraw();else startDraw()});
+  $("art").style.transform="scale("+(au.paused?.86:1+bass*.05)+")"}
 var AC={};try{AC=JSON.parse(localStorage.getItem("tb4art")||"{}")}catch(e){}
 function gen(t){return t.genre||(AC[t.k]&&AC[t.k].g)||"Sin género"}
 var LQ=[],LB=false,LC=0;
@@ -373,7 +335,7 @@ function pump(){if(LB||!LQ.length||!netOk())return;LB=true;var k=LQ.shift(),t=li
   if(!t||AC[k]||t.artist=="Artista desconocido"){LB=false;setTimeout(pump,0);return}
   fetch("https://tb.local/q?term="+encodeURIComponent(t.artist+" "+t.title)).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){var r=d.results&&d.results[0],ok=r&&(norm(r.trackName).indexOf(t.nt)>-1||t.nt.indexOf(norm(r.trackName))>-1);
     AC[k]=ok?{a:(r.artworkUrl100||"").replace("100x100","600x600"),g:r.primaryGenreName||""}:{n:1};if(ok&&AC[k].a)t.art=gimg(AC[k].a);try{localStorage.setItem("tb4art",JSON.stringify(AC))}catch(e){}if(++LC%6==0)render();done()}).catch(function(){done()})}
-var S={theme:"auto",bgd:"black",ac:"#fa2d48",v5:1,lite:null,libGrid:false,cvSrc:"auto",sort:"az",wifiOnly:true,rad:14,cov:"10px",fs:100,cvOn:true,cvStyle:"aurora",cvInt:100,cvPhoto:true,online:true,vol:70,lyOn:true,eq:[0,0,0],sec:{rec:1,mix:1,top:1,art:1,gen:1,alb:1}},plays={},lo,mi,hi,AR={};
+var S={theme:"auto",bgd:"black",ac:"#fa2d48",v5:1,lite:null,libGrid:false,repo:"CarlosRuiz707/Tunebox-v-0.1",cvSrc:"auto",sort:"az",wifiOnly:true,rad:14,cov:"10px",fs:100,cvOn:true,cvStyle:"aurora",cvInt:100,cvPhoto:true,online:true,vol:70,eq:[0,0,0],sec:{rec:1,mix:1,top:1,art:1,gen:1,alb:1}},plays={},lo,mi,hi,AR={};
 try{AR=JSON.parse(localStorage.getItem("tb4ar")||"{}")}catch(e){}
 function lsS(){try{var d=JSON.parse(localStorage.getItem("tb4s")||"null");if(d){var mg=!d.v5;if(mg){d.ac="#fa2d48";d.v5=1}for(var k in d)S[k]=d[k];if(mg)svS()}}catch(e){}}
 function svS(){try{localStorage.setItem("tb4s",JSON.stringify(S))}catch(e){}}
@@ -389,21 +351,13 @@ function seg(k,o){return '<div class="segc">'+o.map(function(x){return '<button 
 function rng(k,mn,mx,lab,u){var v=/^eq\d/.test(k)?S.eq[+k[2]]:S[k];return '<div class="srow"><span>'+lab+'</span><b id="v_'+k+'">'+v+u+'</b></div><input type="range" data-r="'+k+'" min="'+mn+'" max="'+mx+'" value="'+v+'" style="width:100%;accent-color:var(--ac)">'}
 function tg(k,lab,sec){var v=sec?S.sec[k]:S[k],p=(sec?"sec.":"")+k;return '<div class="row"><div class="m" data-tg="'+p+'"><div class="t">'+lab+'</div></div><button data-tg="'+p+'" class="tgl'+(v?' on':'')+'"></button></div>'}
 function settingsView(){var sw=["#fa2d48","#0a84ff","#ff9f0a","#30d158","#bf5af2","#64d2ff","#ffd60a","#ffffff"];
-  return '<h1>Ajustes</h1>'+importCard()+updCard()+'<div class="card"><b>Orden de canciones</b>'+seg("sort",[["az","Alfabético"],["added","Recién añadidas"]])+'</div><div class="card"><b>Rendimiento</b>'+tg("lite","Modo ligero")+'<div class="a">Quita transparencias, sombras y animaciones para ir más fluido en teléfonos modestos.</div></div><div class="card"><b>Apariencia · Liquid Glass</b><div class="a">Capas translúcidas discretas, bordes suaves y profundidad. El modo ligero reduce estos efectos automáticamente.</div><div class="a">Tema</div>'+seg("theme",[["auto","Sistema"],["light","Claro"],["dark","Oscuro"]])+'<div class="a">Fondo oscuro</div>'+seg("bgd",[["black","Negro"],["gray","Gris"]])+'<div class="a">Color de acento</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0">'+sw.map(function(c){return '<button class="sw" data-ac="'+c+'" style="background:'+c+(S.ac==c?';border-color:var(--tx)':'')+'"></button>'}).join("")+'<input type="color" data-c="1" value="'+S.ac+'" style="width:44px;height:34px;border:0;background:none"></div>'+rng("rad",0,28,"Redondeo de tarjetas","px")+'<div class="a" style="margin-top:8px">Forma de las portadas</div>'+seg("cov",[["4px","Cuadrada"],["10px","Redondeada"],["50%","Circular"]])+rng("fs",80,130,"Tamaño del texto","%")+'</div>'+
+  return '<h1>Ajustes</h1>'+importCard()+'<div class="card"><b>Orden de canciones</b>'+seg("sort",[["az","Alfabético"],["added","Recién añadidas"]])+'</div><div class="card"><b>Rendimiento</b>'+tg("lite","Modo ligero")+'<div class="a">Quita transparencias, sombras y animaciones para ir más fluido en teléfonos modestos.</div></div><div class="card"><b>Apariencia</b><div class="a">Tema</div>'+seg("theme",[["auto","Sistema"],["light","Claro"],["dark","Oscuro"]])+'<div class="a">Fondo oscuro</div>'+seg("bgd",[["black","Negro"],["gray","Gris"]])+'<div class="a">Color de acento</div><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0">'+sw.map(function(c){return '<button class="sw" data-ac="'+c+'" style="background:'+c+(S.ac==c?';border-color:var(--tx)':'')+'"></button>'}).join("")+'<input type="color" data-c="1" value="'+S.ac+'" style="width:44px;height:34px;border:0;background:none"></div>'+rng("rad",0,28,"Redondeo de tarjetas","px")+'<div class="a" style="margin-top:8px">Forma de las portadas</div>'+seg("cov",[["4px","Cuadrada"],["10px","Redondeada"],["50%","Circular"]])+rng("fs",80,130,"Tamaño del texto","%")+'</div>'+
   '<div class="card"><b>Canvas</b>'+tg("cvOn","Mostrar canvas")+'<div class="a">Estilo</div>'+seg("cvStyle",[["aurora","Aurora"],["bars","Barras"],["ring","Círculo"]])+'<div class="a">Imagen de fondo</div>'+seg("cvSrc",[["auto","Automático"],["artist","Artista"],["album","Álbum"]])+rng("cvInt",30,200,"Intensidad","%")+tg("cvPhoto","Foto del artista (internet)")+'<div class="a">Usa la foto del artista que suena; si no la encuentra, usa la carátula.</div></div>'+
   '<div class="card"><b>Sonido</b>'+rng("vol",0,100,"Volumen","%")+rng("eq0",-12,12,"Graves"," dB")+rng("eq1",-12,12,"Medios"," dB")+rng("eq2",-12,12,"Agudos"," dB")+'<div style="margin-top:6px"><button data-eqp="0,0,0">Plano</button> <button data-eqp="8,0,-2">Más graves</button> <button data-eqp="-3,5,2">Voces</button> <button data-eqp="-2,0,7">Brillante</button></div></div>'+
   '<div class="card"><b>Secciones del inicio</b>'+tg("rec","Escuchado recientemente",1)+tg("mix","Hecho para ti",1)+tg("top","Más escuchadas",1)+tg("art","Artistas",1)+tg("gen","Géneros",1)+tg("alb","Álbumes",1)+'</div>'+
-  '<div class="card"><b>Datos y caché</b>'+tg("online","Buscar carátulas y géneros en internet")+tg("wifiOnly","Descargar solo con Wi‑Fi")+tg("lyOn","Letras en línea (LRCLIB)")+'<div class="a" style="margin-top:6px">Cada carátula y foto de artista (canvas) se descarga una sola vez y queda guardada en el teléfono. Espacio usado: '+cacheMB()+' MB. Envía título y artista a Apple, Deezer y LRCLIB (letras).</div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button data-prefetch="1">Descargar carátulas y canvas</button><button data-clrart="1">Borrar caché</button><button data-reset="1">Restablecer ajustes</button></div></div>'}
-var APP_VER="2.2",UPD_REPO="CarlosRuiz707/Tunebox-v-0.1",updUrl="";/* UPD_REPO: "usuario/repositorio" de GitHub donde publicas las versiones (Releases) */
-function updCard(){return '<div class="card"><b>Actualizaciones</b><div class="a" style="margin-bottom:10px">Versión instalada: '+APP_VER+'</div><button class="pri" data-upd="1">Buscar actualizaciones</button><div class="a" id="updr" style="margin-top:10px"></div></div>'}
-function vcmp(a,b){var x=String(a).replace(/^v/i,"").split("."),y=String(b).replace(/^v/i,"").split("."),i,d;for(i=0;i<Math.max(x.length,y.length);i++){d=(parseInt(x[i])||0)-(parseInt(y[i])||0);if(d)return d>0?1:-1}return 0}
-function checkUpd(){var el=$("updr");function say(m){if(el)el.innerHTML=m}
-  if(!UPD_REPO){say("Falta indicar tu repositorio de GitHub en <code>UPD_REPO</code> (index.html).");return}
-  say("Buscando…");
-  fetch("https://api.github.com/repos/"+UPD_REPO+"/releases/latest").then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){var v=d.tag_name||d.name||"";updUrl=d.html_url||"";
-    if(v&&vcmp(v,APP_VER)>0){say("Hay una versión nueva: <b>"+esc(v)+"</b>");if(updUrl)el.insertAdjacentHTML("beforeend",'<div style="margin-top:8px"><button class="pri" data-updgo="1">Descargar</button></div>')}
-    else say("Ya tienes la última versión.")}).catch(function(){say("No se pudo comprobar. Revisa tu conexión e inténtalo de nuevo.")})}
-function recs(){return recents.map(function(k){return lib.filter(function(x){return x.k==k})[0]||streamSaved[k]}).filter(Boolean).slice(0,10)}
+  '<div class="card"><b>Datos y caché</b>'+tg("online","Buscar carátulas y géneros en internet")+tg("wifiOnly","Descargar solo con Wi‑Fi")+'<div class="a" style="margin-top:6px">Cada carátula y foto de artista (canvas) se descarga una sola vez y queda guardada en el teléfono. Espacio usado: '+cacheMB()+' MB. Envía título y artista a Apple y Deezer.</div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button data-prefetch="1">Descargar carátulas y canvas</button><button data-clrart="1">Borrar caché</button><button data-reset="1">Restablecer ajustes</button></div></div><div class="card"><b>Acerca de y actualizaciones</b><div class="a" style="margin:2px 0 10px">SoundBits · versión '+verTxt()+'</div><button class="pri" data-upd="1">Buscar actualizaciones</button><div class="a" style="margin-top:12px">Repositorio de GitHub</div><input type="text" id="repo" value="'+esc(S.repo)+'"></div>'}
+function recs(){return recents.map(function(k){return lib.filter(function(x){return x.k==k})[0]}).filter(Boolean).slice(0,10)}
+function tiles(){return '<div class="grid"><div class="tile" data-open="fav_0"><div class="cv" style="background:linear-gradient(135deg,#ff6a7a,#fa2d48)">♥</div><b>Te gustan</b></div><div class="tile" data-shuffle="1"><div class="cv" style="background:linear-gradient(135deg,#5e5ce6,#0a84ff)">⇄</div><b>Aleatorio</b></div>'+lists.slice(0,4).map(function(p,i){return '<div class="tile" data-open="list_'+i+'">'+cover(p.name)+'<b>'+esc(p.name)+'</b></div>'}).join("")+'</div>'}
 function shl(m,type){return '<div class="shelf">'+ks(m).slice(0,12).map(function(k){return '<div class="sc'+(type=="artist"?' rd':'')+'" data-open="'+type+'_'+esc(k)+'">'+cover(k,"",m[k][0])+'<div class="t" style="margin-top:6px;font-weight:600">'+esc(k)+'</div><div class="a">'+(type=="artist"?"Artista":m[k].length+" canciones")+'</div></div>'}).join("")+'</div>'}
 function topH(){var a=lib.filter(function(x){return plays[x.k]}).sort(function(x,y){return plays[y.k]-plays[x.k]}).slice(0,10);return a.length?'<h3>Tus más escuchadas</h3>'+shelf(a):''}
 function mixes(){var ar=uniq("artist"),d=new Date().getDate(),ks=Object.keys(ar).filter(function(k){return k!="Artista desconocido"}).sort(function(a,b){return ar[b].length-ar[a].length}).slice(0,6);if(!ks.length)return"";
@@ -416,10 +370,6 @@ function setCI(){var t=queue[qi];CIok=false;if(!t)return;var u=t.art;
   if(u)CI.src=u}
 var SV=function(p,f){return '<svg viewBox="0 0 24 24" '+(f?'fill="currentColor"':'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"')+'>'+p+'</svg>'};
 var ICO={play:SV('<path d="M7 4.5v15l13-7.5z"/>',1),pause:SV('<rect x="6" y="4" width="4.5" height="16" rx="1.2"/><rect x="13.5" y="4" width="4.5" height="16" rx="1.2"/>',1),next:SV('<path d="M5 5v14l11-7z"/><rect x="17" y="5" width="2.6" height="14" rx="1"/>',1),prev:SV('<path d="M19 5v14L8 12z"/><rect x="4.4" y="5" width="2.6" height="14" rx="1"/>',1),shuf:SV('<path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>'),rep:SV('<path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3"/>')};
-ICO.dev=SV('<rect x="6.5" y="2" width="11" height="20" rx="2.5"/><circle cx="12" cy="14.5" r="3.2"/><circle cx="12" cy="6.5" r=".8" fill="currentColor"/>');
-ICO.mic=SV('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>');
-ICO.queue=SV('<path d="M3 6h13M3 12h9M3 18h9"/><path d="M15 13.5v7l6-3.5z" fill="currentColor"/>');
-$("bdv").innerHTML=ICO.dev+'<span id="bdn"></span>';$("bly").innerHTML=ICO.mic;$("bq").innerHTML=ICO.queue;
 $("npv").innerHTML=ICO.prev;$("nx").innerHTML=ICO.next;$("ns").innerHTML=ICO.shuf;$("nr").innerHTML=ICO.rep;$("mp").innerHTML=ICO.play;$("np2").innerHTML=ICO.play;
 $("bcs").onclick=function(){S.cvSrc=S.cvSrc=="auto"?"artist":S.cvSrc=="artist"?"album":"auto";svS();applyS();setCI()};
 function gimg(u){return AN?"https://tb.local/g?u="+encodeURIComponent(u):u}
@@ -434,11 +384,11 @@ function prefetch(){if(!netOk())return toast(S.online?"Conéctate a una red Wi�
   toast("Descargando carátulas y fotos de "+ar.length+" artistas…")}
 var lp=null;
 function hilite(){var k=queue[qi]&&queue[qi].k;document.querySelectorAll(".row[data-rk]").forEach(function(e){e.classList.toggle("cur",e.dataset.rk==k)})}
-function tick(){var d=durN(queue[qi]),c=curN(queue[qi]);lyTick(c);if($("ly").classList.contains("show")){if(!drag)$("lsc").value=d?c/d*1000:0;$("ltc").textContent=fmt(c);$("ltd").textContent=fmt(d)}$("mpb").style.width=(d?c/d*100:0)+"%";if($("np").classList.contains("show")){if(!drag)$("sc").value=d?c/d*1000:0;$("tc").textContent=fmt(c);$("td").textContent=fmt(d)}}
-function pushNow(){if(!AN)return;var t=queue[qi];if(!t)return;try{var ra=(AC[t.k]&&AC[t.k].a)||(t.provider=="archive"?t.art:"");Android.now(t.title,t.artist,t.album,!au.paused,t.mid||0,ra,Math.round((au.duration||t.dur||0)*1000),Math.round((au.currentTime||0)*1000))}catch(e){}}
+function tick(){var d=au.duration||(queue[qi]&&queue[qi].dur)||0,c=au.currentTime||0;lyTick(c);if($("ly").classList.contains("show")){if(!drag)$("lsc").value=d?c/d*1000:0;$("ltc").textContent=fmt(c);$("ltd").textContent=fmt(d)}$("mpb").style.width=(d?c/d*100:0)+"%";if($("np").classList.contains("show")){if(!drag)$("sc").value=d?c/d*1000:0;$("tc").textContent=fmt(c);$("td").textContent=fmt(d)}}
+function pushNow(){if(!AN)return;devRefresh();var t=queue[qi];if(!t)return;try{var ra=(AC[t.k]&&AC[t.k].a)||"";Android.now(t.title,t.artist,t.album,!au.paused,t.mid||0,ra,Math.round((au.duration||t.dur||0)*1000),Math.round((au.currentTime||0)*1000))}catch(e){}}
 window.tbCmd=function(c){if(c=="toggle")toggle();else if(c=="play"){if(au.paused)toggle()}else if(c=="pause"){if(!au.paused)toggle()}else if(c=="next")next();else if(c=="prev")prev()};
-window.tbSeek=function(x){seekTo(x)};
-var LY={},LP={},LO={},lyCur=-1,lyK=null,npK=null,CTX="",queueCtx="",libChip="Canciones";
+window.tbSeek=function(x){if(queue[qi])au.currentTime=x};
+var LY={},LP={},lyCur=-1,lyK=null,npK=null,CTX="",queueCtx="",libChip="Playlists";
 try{LY=JSON.parse(localStorage.getItem("tb4ly")||"{}")}catch(e){}
 function saveLY(){try{localStorage.setItem("tb4ly",JSON.stringify(LY))}catch(e){toast("No hay espacio para guardar más letras")}}
 function lrcParse(t){var L=[],meta={},sy=false;
@@ -446,133 +396,62 @@ function lrcParse(t){var L=[],meta={},sy=false;
     if(ts.length){sy=true;var tx=l.replace(/\[[^\]]*\]/g,"").replace(/<[^>]*>/g,"").trim();ts.forEach(function(x){L.push({t:x,s:tx})})}
     else{var g=l.match(/^\[(ti|ar|al|by|offset):(.*)\]\s*$/i);if(g)meta[g[1].toLowerCase()]=g[2].trim();else if(l.trim())L.push({t:null,s:l.trim()})}});
   if(sy){L=L.filter(function(x){return x.t!=null});L.sort(function(a,b){return a.t-b.t})}return{L:L,sy:sy,meta:meta}}
-function lyData(t){if(!t)return null;if(LY[t.k])return LP[t.k]||(LP[t.k]=lrcParse(LY[t.k]));var o=LO[t.k];return o&&o.p||null}
-/* Online lyrics (LRCLIB). Only with internet; kept in memory for this session, never stored */
-function lyFetch(t){var o=LO[t.k];if(o){if(o.ld)return"ld";if(o.n)return"no";if(o.off&&Date.now()-o.ts<30000)return"off"}
-  if(!S.lyOn||!navigator.onLine)return"off";
-  var ar=t.artist=="Artista desconocido"?"":t.artist,al=t.album=="Álbum desconocido"?"":t.album,du=Math.round(t.dur||0),e=encodeURIComponent;
-  if(!ar){LO[t.k]={n:1};return"no"}
-  LO[t.k]={ld:1};
-  var exact="https://lrclib.net/api/get?artist_name="+e(ar)+"&track_name="+e(t.title)+(al?"&album_name="+e(al):"")+(du?"&duration="+du:"");
-  function usable(d){var tx=d&&(d.syncedLyrics||d.plainLyrics)||"";return String(tx).trim()?tx:""}
-  fetch(exact).then(function(r){if(!r.ok)throw Error("exact");return r.json()}).then(function(d){var tx=usable(d);if(tx)return tx;throw Error("empty")}).catch(function(){var u="https://lrclib.net/api/search?q="+e(t.title+" "+ar);return fetch(u).then(function(r){if(!r.ok)throw Error("search");return r.json()}).then(function(a){if(!Array.isArray(a)||!a.length)throw Error("none");a.sort(function(x,y){var sx=(norm(x.trackName)==norm(t.title)?4:0)+(norm(x.artistName)==norm(ar)?4:0)+(x.syncedLyrics?2:0),sy=(norm(y.trackName)==norm(t.title)?4:0)+(norm(y.artistName)==norm(ar)?4:0)+(y.syncedLyrics?2:0);return sy-sx});var best=a[0],tx=usable(best);if(!tx)throw Error("empty");return tx})}).then(function(tx){LO[t.k]={p:lrcParse(tx)}}).catch(function(){LO[t.k]={n:1,ts:Date.now()}}).then(function(){var c=queue[qi];if(c&&c.k==t.k)lyBuild()});
-  return"ld"}
-addEventListener("online",function(){var t=queue[qi];if(t&&!lyData(t)){delete LO[t.k];lyBuild()}});
+function lyData(t){if(!t||!LY[t.k])return null;return LP[t.k]||(LP[t.k]=lrcParse(LY[t.k]))}
 function fuzzy(base){var nb=norm(base),best=null;lib.forEach(function(x){if(x.nt.length>2&&nb.indexOf(x.nt)>-1&&(!best||x.nt.length>best.nt.length))best=x});return best}
 function addLyrics(fs){var ok=0,tot=fs.length;Promise.all(fs.map(function(f){return f.text().then(function(tx){var p=lrcParse(tx),base=f.name.replace(/\.[^.]+$/,""),t=null;
   if(p.meta.ti)t=find(p.meta.ti,p.meta.ar);if(!t){var pr=base.split(" - ");t=pr.length>1?find(pr.slice(1).join(" - "),pr[0]):null}if(!t)t=fuzzy(base);
   if(t){LY[t.k]=tx;delete LP[t.k];ok++}}).catch(function(){})})).then(function(){saveLY();lyBuild();toast(ok+" de "+tot+" letras asignadas"+(ok<tot?". Nombra el archivo «Artista - Título.lrc»":""))})}
-function lyBuild(){var t=queue[qi];lyK=t&&t.k;lyCur=-1;if(!t)return;var d=lyData(t),box=$("lyl"),pre=$("lyp");$("bly").classList.toggle("on-h",!!(d&&d.L.length));
-  if(!d||!d.L.length){var st=lyFetch(t),m=st=="ld"?'<div class="lyn">Buscando letra…</div>':(st=="off"?'<div class="lyn">Sin conexión. La letra se descarga con internet.</div>':'<div class="lyn">No encontramos letra para esta canción.</div>')+'<button class="pri" data-lyadd="1">Añadir letra</button>';pre.innerHTML=m;box.innerHTML='<div style="padding:30px 0">'+m+'</div>';return}
-  box.innerHTML=d.L.map(function(x,i){return '<div class="lyl'+(d.sy?'':' pl')+'" data-i="'+i+'">'+(esc(x.s)||"♪")+'</div>'}).join("");lyPrev(d.sy?-1:0);lyTick(curN(t))}
+function lyBuild(){var t=queue[qi];lyK=t&&t.k;lyCur=-1;if(!t)return;var d=lyData(t),box=$("lyl"),pre=$("lyp");
+  if(!d||!d.L.length){var m='<div class="lyn">Aún no hay letra para esta canción.</div><button class="pri" data-lyadd="1">Añadir letra</button>';pre.innerHTML=m;box.innerHTML='<div style="padding:30px 0">'+m+'</div>';return}
+  box.innerHTML=d.L.map(function(x,i){return '<div class="lyl'+(d.sy?'':' pl')+'" data-i="'+i+'">'+(esc(x.s)||"♪")+'</div>'}).join("");lyPrev(d.sy?-1:0);lyTick(au.currentTime||0)}
 function lyPrev(i){var d=lyData(queue[qi]);if(!d)return;var st=Math.max(i,0);$("lyp").innerHTML=d.L.slice(st,st+4).map(function(x,k){return '<div class="'+((k==0&&i>=0)||!d.sy?'c':'')+'">'+(esc(x.s)||"♪")+'</div>'}).join("")}
-function lyMark(i){var n=$("lyl").children,j;for(j=0;j<n.length;j++)n[j].className="lyl"+(j<i?" past":j==i?" cur":"");var el=n[i];if(el){var v=$("lyv");var top=el.offsetTop-v.clientHeight*.38;if(Math.abs(v.scrollTop-top)>12)v.scrollTo({top:top,behavior:"smooth"})}}
+function lyMark(i){var n=$("lyl").children,j;for(j=0;j<n.length;j++)n[j].className="lyl"+(j<i?" past":j==i?" cur":"");var el=n[i];if(el){var v=$("lyv");v.scrollTo({top:el.offsetTop-v.clientHeight*.38,behavior:"smooth"})}}
 function lyTick(c){var t=queue[qi];if(!t||lyK!=t.k)return;var d=lyData(t);if(!d||!d.sy||!d.L.length)return;var i=-1;for(var j=0;j<d.L.length;j++){if(d.L[j].t<=c+.3)i=j;else break}if(i==lyCur)return;lyCur=i;lyPrev(i);if($("ly").classList.contains("show"))lyMark(i)}
 function lyAdd(){if(!queue[qi])return;$("sb").innerHTML='<b>Añadir letra</b><div class="a" style="margin:4px 0 8px">Pega la letra o elige un archivo .lrc o .txt que tengas. Con .lrc la letra se sincroniza.</div><textarea id="lyTa" placeholder="Pega aquí la letra"></textarea><button class="pri" id="lys">Guardar</button><span class="fb blk"><button>Elegir archivo .lrc o .txt</button><input type="file" data-k="lyr1"></span>';$("sheet").classList.add("show")}
-function lyOpen(){var t=queue[qi];if(!t)return;var L=$("ly");L.style.top="";L.style.paddingTop="";L.classList.add("show");if(lyK!=t.k)lyBuild();var d=lyData(t);if(d&&d.sy)lyMark(Math.max(lyCur,0))}
+function lyOpen(){var t=queue[qi];if(!t)return;$("ly").classList.add("show");if(lyK!=t.k)lyBuild();var d=lyData(t);if(d&&d.sy)lyMark(Math.max(lyCur,0))}
 $("lyc").onclick=function(e){if(e.target.closest("[data-lyadd]"))return;lyOpen()};
 document.addEventListener("click",function(e){var g=e.target.closest("[data-lyadd]");if(g){e.stopPropagation();lyAdd()}},true);
 $("lyx").onclick=function(){$("ly").classList.remove("show")};
-$("lyl").onclick=function(e){var g=e.target.closest(".lyl[data-i]");if(!g)return;var d=lyData(queue[qi]);if(d&&d.sy)seekTo(d.L[+g.dataset.i].t)};
+$("lyl").onclick=function(e){var g=e.target.closest(".lyl[data-i]");if(!g)return;var d=lyData(queue[qi]);if(d&&d.sy)au.currentTime=d.L[+g.dataset.i].t};
 $("lpl").onclick=toggle;$("lpv").onclick=prev;$("lnx").onclick=next;
-$("lsc").oninput=function(){drag=true};$("lsc").onchange=function(){drag=false;var d=durN(queue[qi]);if(d)seekTo(this.value/1000*d)};
+$("lsc").oninput=function(){drag=true};$("lsc").onchange=function(){drag=false;if(au.duration)au.currentTime=this.value/1000*au.duration};
 $("lpv").innerHTML=ICO.prev;$("lnx").innerHTML=ICO.next;$("lpl").innerHTML=ICO.play;
 function npCards(){var t=queue[qi];if(!t)return;var a=AR[norm(t.artist)],img=a&&a.p?gimg(a.p):t.art,n=lib.filter(function(x){return x.artist==t.artist}).length;
   $("abt").innerHTML='<b style="display:block;margin-bottom:8px;font-size:17px">Acerca del artista</b><div class="abi" style="'+(img?'background-image:url('+img+')':'background:'+bg(t.artist))+'"></div><div class="t" style="font-weight:700;font-size:18px;margin-top:8px">'+esc(t.artist)+'</div><div class="a">'+n+' canciones en tu biblioteca</div>';
   var nx=queue.slice(qi+1,qi+4);$("nxq").innerHTML='<b style="display:block;margin-bottom:4px;font-size:17px">Siguiente en la cola</b>'+(nx.length?nx.map(function(x){return '<div class="row">'+cover(x.album,"",x)+'<div class="m" style="cursor:default"><div class="t">'+esc(x.title)+'</div><div class="a">'+esc(x.artist)+'</div></div></div>'}).join(""):'<div class="a">No hay más canciones en la cola.</div>')+'<button id="nxo" style="margin-top:10px">Abrir cola</button>'}
-$("abt").onclick=function(){var t=queue[qi];if(!t)return;open={t:"artist",k:t.artist};tab="home";closeNP();render();scrollTo(0,0)};
+$("abt").onclick=function(){var t=queue[qi];if(!t)return;open={t:"artist",k:t.artist};tab="home";$("np").classList.remove("show");render();scrollTo(0,0)};
 $("nxq").onclick=function(e){if(e.target.id=="nxo")$("bq").click()};
 function it(o,c,t,sub){return S.libGrid?'<div class="gc" '+o+'>'+c+'<div class="t">'+t+'</div><div class="a">'+sub+'</div></div>':'<div class="row lk" '+o+'>'+c+'<div class="m"><div class="t">'+t+'</div><div class="a">'+sub+'</div></div><span class="chev">›</span></div>'}
-function libView(){var h='<h1>Tu biblioteca</h1><div class="chips">'+["Canciones","Playlists","Artistas","Álbumes","Géneros"].map(function(g){return '<button data-lchip="'+g+'" class="'+(g==libChip?'on':'')+'">'+g+'</button>'}).join("")+'</div><div class="lbar">'+seg("sort",[["az","A–Z"],["added","Recientes"]])+'<button class="ib" data-lgrid="1">'+(S.libGrid?'☰':'▦')+'</button></div>';
+function libView(){var h='<h1>Tu biblioteca</h1><div class="chips">'+["Playlists","Artistas","Álbumes","Géneros","Canciones"].map(function(g){return '<button data-lchip="'+g+'" class="'+(g==libChip?'on':'')+'">'+g+'</button>'}).join("")+'</div><div class="lbar">'+seg("sort",[["az","A–Z"],["added","Recientes"]])+'<button class="ib" data-lgrid="1">'+(S.libGrid?'☰':'▦')+'</button></div>';
   if(libChip=="Playlists"){var its=[it('data-open="fav_0"','<div class="cv" style="background:linear-gradient(135deg,#ff6a7a,#fa2d48)">♥</div>',"Canciones que te gustan",Object.keys(likes).length+" canciones")].concat(lists.map(function(p,i){return it('data-open="list_'+i+'"',cover(p.name),esc(p.name),plTracks(p).length+" canciones")}));
     h+=(S.libGrid?'<div class="gridc">'+its.join("")+'</div>':its.join(""))+'<div style="margin-top:10px"><button data-newpl="1">＋ Nueva playlist</button></div>'}
-  else if(libChip=="Canciones"){var sl=srt(lib),l2=lst(sl);h+=lib.length?'<div class="pbtns"><button data-pl="'+l2+'">▶ Reproducir</button><button data-pl="'+l2+'s">⇄ Aleatorio</button></div>'+list(sl):emptyHome()}
+  else if(libChip=="Canciones")h+=list(srt(lib));
   else{var f=libChip=="Artistas"?"artist":libChip=="Géneros"?"genre":"album",m=uniq(f),its2=ks(m).map(function(k){return it('data-open="'+f+'_'+esc(k)+'"',cover(k,"",m[k][0]),esc(k),m[k].length+" canciones")});h+=S.libGrid?'<div class="gridc">'+its2.join("")+'</div>':its2.join("")}
   return h}
-/* Online catalog fallback. Local matches always take precedence. */
-var streamResults=[],streamTimer=null,streamRequest=0;
-function closeNP(){$("np").classList.remove("show");stopDraw()}
-function openExt(u){try{if(AN&&typeof Android.openUrl==="function"){Android.openUrl(u);return}}catch(e){}window.open(u,"_blank")}
-function streamRow(t,l,i){return '<div class="row" data-rk="'+esc(t.k)+'">'+cover(t.album,"",t)+'<div class="m" data-p="'+l+'_'+i+'"><div class="t">'+esc(t.title)+'</div><div class="a">'+esc(t.artist)+(t.dur?" · "+fmt(t.dur):"")+'</div></div><button class="ib" data-like="'+esc(t.k)+'">'+(likes[t.k]?'♥':'♡')+'</button><button class="ib" data-stream-add="'+i+'">＋</button></div>'}
-
-/* Podcast discovery: Apple Podcasts/iTunes catalogue + RSS episodes. */
-var mediaMode="music", podcastItems=[], podcastEpisodes=[], podcastAudio=null, podcastPos={}, podcastActiveIndex=-1;
-function importPlaylistLink(raw){
- var url=(raw||"").trim();if(!url){toast("Pega primero un enlace");return}
- if(!/^https?:\/\//i.test(url)){toast("El enlace debe comenzar por https:// o http://");return}
- if(/open\.spotify\.com\/(playlist|album|track)/i.test(url)){toast("Spotify: para importar canciones hace falta conectar la API oficial con OAuth. El enlace no contiene audio reproducible.");return}
- if(/(music\.)?youtube\.com|youtu\.be/i.test(url)){toast("YouTube: se necesita la integración oficial para consultar/reproducir la playlist.");return}
- if(/\.(mp3|m4a|aac|ogg|opus|wav|flac)(?:[?#].*)?$/i.test(url)){var name=decodeURIComponent(url.split("/").pop().split(/[?#]/)[0]||"Audio remoto");play([mk({title:name.replace(/\.[^.]+$/,""),artist:"Audio en línea",album:"Enlace importado",src:url,k:"url:"+url,provider:"url"})],0);toast("Reproduciendo audio del enlace");return}
- toast("Consultando enlace…");fetch(url).then(function(r){if(!r.ok)throw Error("http");return r.text()}).then(function(tx){
-  if(/<rss|<feed|<channel/i.test(tx)){var doc=new DOMParser().parseFromString(tx,"text/xml"),items=[].slice.call(doc.querySelectorAll("item")),tracks=items.map(function(n){var en=n.querySelector("enclosure"),tt=n.querySelector("title");return{title:tt?tt.textContent:"Episodio",artist:"Podcast",album:"RSS importado",src:en&&en.getAttribute("url")||"",k:"rss:"+(en&&en.getAttribute("url")||"")}}).filter(function(x){return /^https?:/i.test(x.src)});if(!tracks.length)throw Error("no episodes");var p={name:"RSS · "+(doc.querySelector("channel>title")||{}).textContent,items:tracks.map(function(x){return{t:x.title,a:x.artist,src:x.src}})};lists.push(p);sv();render();toast("RSS importado: "+tracks.length+" episodios");return}
-  if(/^\s*#EXTM3U/m.test(tx)){var lines=tx.split(/\r?\n/),title="Audio",arr=[];lines.forEach(function(l){l=l.trim();if(l.indexOf("#EXTINF:")==0){title=l.split(",").slice(1).join(",")||"Audio"}else if(/^https?:\/\//i.test(l)){arr.push({title:title,artist:"Playlist importada",album:"M3U",src:l,k:"m3u:"+l});title="Audio"}});if(!arr.length)throw Error("no entries");play(arr,0);toast("Playlist M3U cargada: "+arr.length+" pistas");return}
-  var rows;if(/^\s*[\[{]/.test(tx)){var j=JSON.parse(tx);rows=Array.isArray(j)?j:(j.tracks||j.items||j.songs||[])}else if(/title,|titulo,|título,/i.test(tx.slice(0,200))){rows=parseCSV(tx)}else throw Error("format");
-  var arr2=rows.map(function(x){return{title:x.title||x.name||x.t||x.track||"Canción",artist:x.artist||x.artists||x.a||"",album:x.album||"Playlist importada",src:x.url||x.src||x.audio||x.audioUrl||"",k:"link:"+(x.url||x.src||x.audio||x.audioUrl||x.title||x.name)}}).filter(function(x){return /^https?:\/\//i.test(x.src)});if(!arr2.length)throw Error("no audio urls");play(arr2,0);toast("Playlist importada: "+arr2.length+" pistas")
- }).catch(function(){toast("No se pudo importar. El enlace puede bloquear CORS o no ser una lista RSS/M3U/JSON/CSV con URLs de audio.")})
-}
-function podcastSearch(){
- var term=($("podq")&&$("podq").value||q||"").trim(),box=$("podresults");
- if(!box||term.length<2){if(box)box.innerHTML='<div class="a">Escribe al menos dos caracteres.</div>';return}
- box.innerHTML='<div class="a" style="padding:12px 0">Buscando programas…</div>';
- fetch("https://itunes.apple.com/search?media=podcast&entity=podcast&limit=20&term="+encodeURIComponent(term))
- .then(function(r){if(!r.ok)throw Error("itunes");return r.json()})
- .then(function(d){podcastItems=d.results||[];box.innerHTML=podcastItems.length?podcastItems.map(function(p,i){return '<div class="row"><div class="cv">🎙</div><div class="m"><div class="t">'+esc(p.collectionName||p.trackName||"Podcast")+'</div><div class="a">'+esc(p.artistName||"")+'</div></div><button data-pod-open="'+i+'">Episodios</button></div>'}).join(""):'<div class="empty">No encontramos programas.</div>'})
- .catch(function(){box.innerHTML='<div class="empty">No se pudo consultar Apple Podcasts. Comprueba la conexión e inténtalo de nuevo.</div>'});
-}
-function podcastLoadRSS(url,idx){
- podcastActiveIndex=idx;
- var box=$("podresults");box.innerHTML='<div class="a">Consultando episodios RSS…</div>';
- fetch(url).then(function(r){if(!r.ok)throw Error("rss");return r.text()}).then(function(tx){
-  var doc=new DOMParser().parseFromString(tx,"text/xml"),items=[].slice.call(doc.querySelectorAll("item"));
-  podcastEpisodes=items.map(function(n){var enc=n.querySelector("enclosure"),title=n.querySelector("title"),date=n.querySelector("pubDate"),desc=n.querySelector("description");return {title:title?title.textContent:"Episodio",url:enc&&enc.getAttribute("url")||"",type:enc&&enc.getAttribute("type")||"",date:date?date.textContent:"",desc:desc?desc.textContent:""} }).filter(function(x){return /^https?:/i.test(x.url)});
-  box.innerHTML='<button data-pod-back="1">‹ Programas</button><h3>'+esc(podcastItems[idx].collectionName||"Podcast")+'</h3>'+podcastEpisodes.map(function(ep,i){return '<div class="row"><div class="cv">▶</div><div class="m"><div class="t">'+esc(ep.title)+'</div><div class="a">'+esc(ep.date)+'</div></div><button data-pod-play="'+i+'">▶</button><button data-pod-save="'+i+'">↓</button></div>'}).join("")+(podcastEpisodes.length?"":'<div class="empty">El RSS no contiene episodios con archivo de audio.</div>');
- }).catch(function(){box.innerHTML='<div class="empty">No se pudo leer el RSS desde este dispositivo. Algunos feeds bloquean solicitudes externas (CORS).</div>'});
-}
-function podcastPlay(i){
- var ep=podcastEpisodes[i];if(!ep||!ep.url)return;
- try{
-  /* Reuse the app's primary media element so Android media controls,
-     lock-screen notification and the existing foreground service work. */
-  if(podcastAudio){try{podcastAudio.pause()}catch(e){}}
-  podcastAudio=null;
-  var t=mk({title:ep.title||"Episodio",artist:(podcastItems[podcastActiveIndex]||{}).collectionName||"Podcast",album:"Podcast",src:ep.url,k:"podcast:"+ep.url,provider:"podcast",podcastUrl:ep.url,dur:0});
-  play([t],0);
-  au.addEventListener("loadedmetadata",function restorePodcastPosition(){
-    au.removeEventListener("loadedmetadata",restorePodcastPosition);
-    var pos=podcastPos[ep.url]||0;
-    if(pos>0&&isFinite(au.duration)&&pos<au.duration)au.currentTime=pos;
-  });
-  toast("Reproduciendo: "+ep.title);
- }catch(e){toast("No se pudo abrir el episodio")}
-}
-function podcastSave(i){
- var ep=podcastEpisodes[i];if(!ep)return;
- var a=document.createElement("a");a.href=ep.url;a.download=(ep.title||"episodio").replace(/[\\/:*?"<>|]/g,"_");a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
- toast("Descarga solicitada; depende del permiso del feed y del navegador");
-}
-try{podcastPos=JSON.parse(localStorage.getItem("sb_podcast_pos")||"{}")}catch(e){}
-function onlineSearch(){
-  clearTimeout(streamTimer);streamResults=[];streamRequest++;
-  var token=streamRequest,box=$("streambox"),term=(q||"").trim();
-  if(!box||term.length<2){if(box)box.innerHTML="";return}
-  var nt=norm(term),exactLocal=lib.some(function(t){return t.nt==nt||norm(t.title+" "+t.artist)==nt||norm(t.artist+" "+t.title)==nt});
-  if(exactLocal){box.innerHTML="";return}
-  if(!AN){box.innerHTML="";return}
-  if(!navigator.onLine){box.innerHTML='<div class="empty">Sin conexión. No encontramos la canción en tu biblioteca.</div>';return}
-  box.innerHTML='<div class="a" style="padding:16px 0">Buscando más resultados…</div>';
-  streamTimer=setTimeout(function(){
-    fetch("https://tb.local/stream?q="+encodeURIComponent(term)).then(function(r){if(!r.ok)throw new Error("network");return r.json()}).then(function(items){
-      if(token!==streamRequest||(q||"").trim()!==term)return;
-      streamResults=(items||[]).map(function(x){return mk({title:x.title,artist:x.artist,album:x.album||"",dur:x.dur||0,src:"https://tb.local/streamfile?u="+encodeURIComponent(x.url),art:x.art||"",k:"archive:"+x.id+":"+x.url,provider:"archive",license:x.license||"",sourceUrl:x.sourceUrl||"https://archive.org/details/"+encodeURIComponent(x.id),added:0})}).filter(function(t){return !lib.some(function(local){return local.nt==t.nt&&local.na==t.na})});
-      if(!streamResults.length){box.innerHTML="";return}
-      streamResults.forEach(function(t){streamSaved[t.k]=t});sv();
-      var l=lst(streamResults);box.innerHTML='<h3>Más resultados</h3>'+streamResults.map(function(t,i){return streamRow(t,l,i)}).join("");
-    }).catch(function(){if(token===streamRequest)box.innerHTML='<div class="empty">No se pudo consultar el catálogo. Inténtalo de nuevo.</div>'});
-  },550);
-}
+ICO.dev=SV('<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><circle cx="12" cy="15" r="3"/><circle cx="12" cy="6.5" r=".9" fill="currentColor"/>');
+ICO.lyr=SV('<path d="M4 5h16v11H9.5L5 20v-4H4z"/><path d="M8 9h8M8 12.5h5"/>');
+ICO.que=SV('<path d="M3 6h13M3 12h13M3 18h7"/><path d="M15 14.5v6l5-3z" fill="currentColor"/>');
+$("bdi").innerHTML=ICO.dev;$("bly").innerHTML=ICO.lyr;$("bqu").innerHTML=ICO.que;
+var DEV={cur:null,type:"speaker",list:[]};
+function devRefresh(){if(!AN)return;try{var d=JSON.parse(Android.device());DEV={cur:d.cur||null,type:d.type||"speaker",list:d.list||[]}}catch(e){}var ext=DEV.type!="speaker"&&DEV.cur;$("bdev").className="dv"+(ext?" ext":"");$("bdn").textContent=ext?DEV.cur:""}
+function devSheet(){devRefresh();var nm=(AN&&DEV.cur)||(AN?"Este teléfono":"Este dispositivo");var h='<b>Reproduciendo en</b><div class="row" style="padding:12px 0"><div class="m" style="cursor:default"><div class="t" style="color:var(--ac);font-weight:700;font-size:17px">'+esc(nm)+'</div><div class="a">'+(DEV.type=="bt"?"Bluetooth":DEV.type=="wired"?"Con cable":"Altavoz del teléfono")+'</div></div></div>';
+  var o=(DEV.list||[]).filter(function(x){return x.name&&x.name!=nm});if(o.length)h+='<div class="a" style="margin:2px 0 4px">Otras salidas disponibles</div>'+o.map(function(x){return '<div class="row"><div class="m" style="cursor:default"><div class="t">'+esc(x.name)+'</div><div class="a">'+(x.type=="bt"?"Bluetooth":x.type=="wired"?"Con cable":"Altavoz")+'</div></div></div>'}).join("");
+  if(AN)h+='<button class="pri" data-n="out" style="margin-top:8px">Cambiar salida de audio</button>';$("sb").innerHTML=h;$("sheet").classList.add("show")}
+function sheetNP(){var t=queue[qi];$("sb").innerHTML='<b>'+(t?esc(t.title):"Opciones")+'</b><div class="a" style="margin-bottom:8px">'+(t?esc(t.artist):"")+'</div><button data-n="spd">Velocidad: '+$("bsp").textContent+'</button><button data-n="slp">Temporizador: '+(sleepM?sleepM+" min":"apagado")+'</button><button data-n="cvon">Canvas: '+(cvOn?"activado":"apagado")+'</button><button data-n="cvsrc">Imagen del canvas: '+$("bcs").textContent+'</button>'+(t?'<button data-n="trk">Opciones de la canción…</button>':'');$("sheet").classList.add("show")}
+$("bdev").onclick=devSheet;$("bly").onclick=function(){lyOpen()};$("bqu").onclick=function(){$("bq").onclick()};
+$("mtx").addEventListener("click",devRefresh);$("mcv").addEventListener("click",devRefresh);
+if(AN)setInterval(function(){if($("np").classList.contains("show"))devRefresh()},4000);
+function verTxt(){if(!AN)return "web";try{var v=JSON.parse(Android.version());return v.name+" ("+v.code+")"}catch(e){return "?"}}
+function vcmp(a,b){a=String(a).replace(/^v/i,"").split(".").map(Number);b=String(b).replace(/^v/i,"").split(".").map(Number);for(var i=0;i<Math.max(a.length,b.length);i++){var x=a[i]||0,y=b[i]||0;if(x!=y)return x>y?1:-1}return 0}
+function checkUpdate(){var cur="0";if(AN)try{cur=JSON.parse(Android.version()).name}catch(e){}toast("Buscando actualizaciones…");
+  fetch("https://api.github.com/repos/"+S.repo+"/releases/latest",{headers:{Accept:"application/vnd.github+json"}}).then(function(r){if(!r.ok)throw r.status;return r.json()}).then(function(d){
+    var tag=d.tag_name||"",apk=(d.assets||[]).filter(function(a){return /\.apk$/i.test(a.name)})[0],url=apk?apk.browser_download_url:d.html_url;
+    if(vcmp(tag,cur)>0){$("sb").innerHTML='<b>Hay una versión nueva</b><div class="a" style="margin:4px 0 10px">Tienes la '+esc(cur)+' y está disponible la '+esc(tag.replace(/^v/i,""))+'.</div><button class="pri" data-u="'+esc(url)+'">Descargar actualización</button><div class="a" style="margin-top:8px">Se descargará el APK; ábrelo para instalarlo encima de la versión actual.</div>';$("sheet").classList.add("show")}
+    else toast("Ya tienes la última versión ("+cur+")")}).catch(function(c){$("sb").innerHTML='<b>No se pudo comprobar</b><div class="a" style="margin:4px 0 10px">'+(c==404?"El repositorio todavía no tiene versiones publicadas, o es privado.":"No hay conexión o GitHub no respondió.")+' Puedes abrir la página de compilaciones y descargar el APK más reciente.</div><button class="pri" data-u="https://github.com/'+esc(S.repo)+'/actions">Abrir compilaciones</button>';$("sheet").classList.add("show")})}
 (function(){var w=$("sbw"),px=document.querySelector(".sb-px");w.innerHTML="SoundBits".split("").map(function(c,i){return '<span class="'+(i>=5?'b':'')+'" style="--i:'+i+'">'+c+'</span>'}).join("");for(var i=0;i<12;i++){var b=document.createElement("b");b.style.cssText="--x:"+(28+Math.random()*44)+"%;--y:"+(34+Math.random()*26)+"%;animation-delay:"+(.2+Math.random()*1.3)+"s";px.appendChild(b)}})();
 setTimeout(function(){var sp=$("splash");sp.classList.add("out");setTimeout(function(){sp.remove()},520)},2700);
-rs();lsS();ld();applyS();render();if(AN)try{S.vol=Android.getVol();$("vol").value=S.vol}catch(e){}if(AN)scanNative();
+rs();draw();lsS();ld();applyS();render();if(AN)try{S.vol=Android.getVol();$("vol").value=S.vol}catch(e){}if(AN){var cl=loadLib();if(cl.length)setLib(cl);scanNative()}
+document.addEventListener("visibilitychange",function(){if(!document.hidden&&AN)scanNative(true)});
 </script>
 </body>
 </html>

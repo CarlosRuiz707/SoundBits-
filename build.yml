@@ -1,0 +1,42 @@
+name: Build APK
+on: [workflow_dispatch, push]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Arrange project folders
+        run: |
+          mkdir -p app/src/main/java/app/tunebox app/src/main/assets app/src/main/res
+          mv *.java app/src/main/java/app/tunebox/
+          mv AndroidManifest.xml app/src/main/
+          mv index.html app/src/main/assets/
+          mv app-build.gradle app/build.gradle
+          for f in res_*; do d=$(echo "$f" | cut -d_ -f2); n="${f#res_${d}_}"; mkdir -p "app/src/main/res/$d"; mv "$f" "app/src/main/res/$d/$n"; done
+      - name: Build
+        run: gradle assembleDebug
+      - name: Name the APK
+        id: ver
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk SoundBits.apk
+          echo "v=$(grep -o 'versionName "[^"]*"' app/build.gradle | cut -d'"' -f2)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SoundBits-apk
+          path: SoundBits.apk
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.v }}
+          name: SoundBits ${{ steps.ver.outputs.v }}
+          files: SoundBits.apk
