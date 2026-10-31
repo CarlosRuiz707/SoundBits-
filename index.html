@@ -233,7 +233,7 @@ function emptyHome(){return '<div class="card" style="text-align:center;padding:
 function render(){Ls=[];CTX=open?(open.t=="fav"?"Canciones que te gustan":open.t=="list"?(lists[open.k]||{}).name:open.k):tab=="search"?"Búsqueda":tab=="lib"?"Tu biblioteca":chip=="Todo"?"Inicio":chip;var h="",a;
   document.querySelectorAll("#nav button").forEach(function(b){b.classList.toggle("on",b.dataset.t==tab)});
   if(open){var c=colOf(open),l=lst(c.tr);h='<button class="bk" data-back="1">‹ Volver</button><div class="hero2">'+cover(c.n,"",c.tr[0])+'<h1>'+esc(c.n)+'</h1><div class="a">'+c.s+' · '+c.tr.length+' canciones</div></div><div class="pbtns"><button data-pl="'+l+'">▶ Reproducir</button><button data-pl="'+l+'s">⇄ Aleatorio</button></div>'+(open.t!="list"?seg("sort",[["az","A–Z"],["added","Recién añadidas"]]):'')+(open.t=="list"?'<div class="pbtns"><button data-pren="'+open.k+'">Renombrar</button><button data-pdel="'+open.k+'">Eliminar</button></div>':'')+list(c.tr)}
-  else if(tab=="set"){h=settingsView()}else if(tab=="search"){h='<h1>Buscar</h1><input type="text" id="q" placeholder="Canciones, artistas o álbumes" value="'+esc(q)+'"><div id="res">'+res()+'</div>'}
+  else if(tab=="set"){h=settingsView()}else if(tab=="search"){h='<h1>Buscar</h1><input type="text" id="q" placeholder="Canciones, artistas o álbumes" value="'+esc(q)+'"><div class="chips"><button data-media-mode="music" class="'+(mediaMode=="music"?"on":"")+'">Música</button><button data-media-mode="podcasts" class="'+(mediaMode=="podcasts"?"on":"")+'">Podcasts</button></div><div id="podbox" style="display:'+(mediaMode=="podcasts"?"block":"none")+'"><input type="text" id="podq" placeholder="Buscar podcasts en Apple Podcasts"><button class="pri" id="podsearch">Buscar podcasts</button><div id="podresults"></div></div><div id="res" style="display:'+(mediaMode=="music"?"block":"none")+'">'+res()+'</div>'}
   else if(tab=="lib"){h=libView()}else{h='<div class="a" style="text-transform:uppercase;font-weight:600;letter-spacing:.5px;margin-top:6px">'+new Date().toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long"})+'</div><h1 style="margin-top:0">'+greet()+'</h1><div class="chips">'+["Todo","Artistas","Géneros","Álbumes"].map(function(g){return '<button data-chip="'+g+'" class="'+(g==chip?'on':'')+'">'+g+'</button>'}).join("")+'</div>';
     if(!lib.length)h+=emptyHome();
     else if(chip=="Todo"){var rec=recs();h+=(S.sec.rec&&rec.length?'<h3>Escuchado recientemente</h3>'+shelf(rec):'')+(S.sec.mix?mixes():'')+(S.sec.top?topH():'')+(S.sec.art?'<h3>Tus artistas</h3>'+shl(uniq("artist"),"artist"):'')+(S.sec.gen?'<h3>Tus géneros</h3>'+shl(uniq("genre"),"genre"):'')+(S.sec.alb?'<h3>Tus álbumes</h3>'+shl(uniq("album"),"album"):'')}
@@ -245,10 +245,16 @@ $("nav").innerHTML=[["home","Inicio"],["search","Buscar"],["lib","Biblioteca"],[
 $("nav").onclick=function(e){var b=e.target.closest("button");if(!b)return;tab=b.dataset.t;open=null;render();scrollTo(0,0)};
 window.goBack=function(){if($("ly").classList.contains("show")){$("ly").classList.remove("show");return true}if($("sheet").classList.contains("show")){closeSheet();return true}if($("np").classList.contains("show")){closeNP();return true}if(open){open=null;render();return true}if(tab!="home"){tab="home";render();return true}return false};
 $("main").oninput=function(e){var i=e.target;
-  if(i.id=="q"){q=i.value;Ls=[];$("res").innerHTML=res();obs();onlineSearch();return}
+  if(i.id=="podq"){return}if(i.id=="q"){q=i.value;Ls=[];$("res").innerHTML=res();obs();onlineSearch();return}
   if(i.dataset.c){S.ac=i.value;applyS();svS();return}
   if(i.dataset.r){var k=i.dataset.r,v=+i.value;if(/^eq\d/.test(k))S.eq[+k[2]]=v;else S[k]=v;if(k=="vol")setVol(v);applyS();svS();var l=$("v_"+k);if(l)l.textContent=v+(k=="rad"?"px":(k=="fs"||k=="cvInt"||k=="vol")?"%":" dB")}};
 $("main").onclick=function(e){var t=e.target,g;
+  if(g=t.closest("[data-media-mode]")){mediaMode=g.dataset.mediaMode;render();return}
+  if(t.closest("#podsearch")){podcastSearch();return}
+  if(g=t.closest("[data-pod-open]")){var p=podcastItems[+g.dataset.podOpen];if(p&&p.feedUrl)podcastLoadRSS(p.feedUrl,+g.dataset.podOpen);else if(p&&p.collectionId){podcastActiveIndex=+g.dataset.podOpen;fetch("https://itunes.apple.com/lookup?id="+p.collectionId+"&entity=podcastEpisode&limit=200").then(function(r){return r.json()}).then(function(d){var rr=(d.results||[]).filter(function(x){return x.episodeUrl});podcastEpisodes=rr.map(function(x){return {title:x.trackName,url:x.episodeUrl,date:x.releaseDate||"",type:""}});var b=$("podresults");b.innerHTML='<button data-pod-back="1">‹ Programas</button><h3>'+esc(p.collectionName||"Podcast")+'</h3>'+podcastEpisodes.map(function(ep,i){return '<div class="row"><div class="cv">▶</div><div class="m"><div class="t">'+esc(ep.title)+'</div><div class="a">'+esc(ep.date)+'</div></div><button data-pod-play="'+i+'">▶</button><button data-pod-save="'+i+'">↓</button></div>'}).join("")}).catch(function(){toast("No se pudieron consultar episodios")})}return}
+  if(t.closest("[data-pod-back]")){podcastSearch();return}
+  if(g=t.closest("[data-pod-play]")){podcastPlay(+g.dataset.podPlay);return}
+  if(g=t.closest("[data-pod-save]")){podcastSave(+g.dataset.podSave);return}
   if(g=t.closest("[data-lchip]")){libChip=g.dataset.lchip;render();return}
   if(t.closest("[data-lgrid]")){S.libGrid=!S.libGrid;svS();render();return}
   if(g=t.closest("[data-set]")){var kv=g.dataset.set.split(":");S[kv[0]]=kv[1];applyS();svS();setCI();render();return}
@@ -316,7 +322,7 @@ function toggle(){if(!queue[qi]){if(lib.length)play(lib,0);else toast("Primero a
 function next(){if(!queue.length)return;qi=shuf&&queue.length>1?(function(){var n;do{n=Math.floor(Math.random()*queue.length)}while(n==qi);return n})():(qi+1)%queue.length;load()}
 function prev(){if(!queue.length)return;if(curN(queue[qi])>3){seekTo(0);return}qi=(qi-1+queue.length)%queue.length;load()}
 au.onseeked=function(){pushNow()};au.onplay=au.onpause=function(){playing=!au.paused;pushNow();ui()};
-au.onended=function(){if(rep){au.currentTime=0;au.play()}else next()};au.ontimeupdate=tick;au.onerror=function(){toast("Formato no compatible. Saltando…");setTimeout(next,600)};
+au.onended=function(){if(rep){au.currentTime=0;au.play()}else next()};au.ontimeupdate=function(){tick();var ct=queue[qi];if(ct&&ct.podcastUrl){podcastPos[ct.podcastUrl]=au.currentTime;try{localStorage.setItem("sb_podcast_pos",JSON.stringify(podcastPos))}catch(e){}}};au.onerror=function(){toast("Formato no compatible. Saltando…");setTimeout(next,600)};
 function meta(){if(!("mediaSession" in navigator)||!queue[qi])return;var t=queue[qi];try{navigator.mediaSession.metadata=new MediaMetadata({title:t.title,artist:t.artist,album:t.album,artwork:t.art?[{src:t.art}]:[]});
   var m=navigator.mediaSession;m.setActionHandler("play",toggle);m.setActionHandler("pause",toggle);m.setActionHandler("nexttrack",next);m.setActionHandler("previoustrack",prev);m.setActionHandler("seekto",function(d){au.currentTime=d.seekTime})}catch(e){}}
 function ui(){var t=queue[qi];$("mini").style.display=t?"flex":"none";if(!t)return;var d=durN(t),c=curN(t),lk=likes[t.k],h=hue(t.album),pz=pausedN(t);
@@ -486,6 +492,50 @@ var streamResults=[],streamTimer=null,streamRequest=0;
 function closeNP(){$("np").classList.remove("show");stopDraw()}
 function openExt(u){try{if(AN&&typeof Android.openUrl==="function"){Android.openUrl(u);return}}catch(e){}window.open(u,"_blank")}
 function streamRow(t,l,i){return '<div class="row" data-rk="'+esc(t.k)+'">'+cover(t.album,"",t)+'<div class="m" data-p="'+l+'_'+i+'"><div class="t">'+esc(t.title)+'</div><div class="a">'+esc(t.artist)+(t.dur?" · "+fmt(t.dur):"")+'</div></div><button class="ib" data-like="'+esc(t.k)+'">'+(likes[t.k]?'♥':'♡')+'</button><button class="ib" data-stream-add="'+i+'">＋</button></div>'}
+
+/* Podcast discovery: Apple Podcasts/iTunes catalogue + RSS episodes. */
+var mediaMode="music", podcastItems=[], podcastEpisodes=[], podcastAudio=null, podcastPos={}, podcastActiveIndex=-1;
+function podcastSearch(){
+ var term=($("podq")&&$("podq").value||q||"").trim(),box=$("podresults");
+ if(!box||term.length<2){if(box)box.innerHTML='<div class="a">Escribe al menos dos caracteres.</div>';return}
+ box.innerHTML='<div class="a" style="padding:12px 0">Buscando programas…</div>';
+ fetch("https://itunes.apple.com/search?media=podcast&entity=podcast&limit=20&term="+encodeURIComponent(term))
+ .then(function(r){if(!r.ok)throw Error("itunes");return r.json()})
+ .then(function(d){podcastItems=d.results||[];box.innerHTML=podcastItems.length?podcastItems.map(function(p,i){return '<div class="row"><div class="cv">🎙</div><div class="m"><div class="t">'+esc(p.collectionName||p.trackName||"Podcast")+'</div><div class="a">'+esc(p.artistName||"")+'</div></div><button data-pod-open="'+i+'">Episodios</button></div>'}).join(""):'<div class="empty">No encontramos programas.</div>'})
+ .catch(function(){box.innerHTML='<div class="empty">No se pudo consultar Apple Podcasts. Comprueba la conexión e inténtalo de nuevo.</div>'});
+}
+function podcastLoadRSS(url,idx){
+ podcastActiveIndex=idx;
+ var box=$("podresults");box.innerHTML='<div class="a">Consultando episodios RSS…</div>';
+ fetch(url).then(function(r){if(!r.ok)throw Error("rss");return r.text()}).then(function(tx){
+  var doc=new DOMParser().parseFromString(tx,"text/xml"),items=[].slice.call(doc.querySelectorAll("item"));
+  podcastEpisodes=items.map(function(n){var enc=n.querySelector("enclosure"),title=n.querySelector("title"),date=n.querySelector("pubDate"),desc=n.querySelector("description");return {title:title?title.textContent:"Episodio",url:enc&&enc.getAttribute("url")||"",type:enc&&enc.getAttribute("type")||"",date:date?date.textContent:"",desc:desc?desc.textContent:""} }).filter(function(x){return /^https?:/i.test(x.url)});
+  box.innerHTML='<button data-pod-back="1">‹ Programas</button><h3>'+esc(podcastItems[idx].collectionName||"Podcast")+'</h3>'+podcastEpisodes.map(function(ep,i){return '<div class="row"><div class="cv">▶</div><div class="m"><div class="t">'+esc(ep.title)+'</div><div class="a">'+esc(ep.date)+'</div></div><button data-pod-play="'+i+'">▶</button><button data-pod-save="'+i+'">↓</button></div>'}).join("")+(podcastEpisodes.length?"":'<div class="empty">El RSS no contiene episodios con archivo de audio.</div>');
+ }).catch(function(){box.innerHTML='<div class="empty">No se pudo leer el RSS desde este dispositivo. Algunos feeds bloquean solicitudes externas (CORS).</div>'});
+}
+function podcastPlay(i){
+ var ep=podcastEpisodes[i];if(!ep||!ep.url)return;
+ try{
+  /* Reuse the app's primary media element so Android media controls,
+     lock-screen notification and the existing foreground service work. */
+  if(podcastAudio){try{podcastAudio.pause()}catch(e){}}
+  podcastAudio=null;
+  var t=mk({title:ep.title||"Episodio",artist:(podcastItems[podcastActiveIndex]||{}).collectionName||"Podcast",album:"Podcast",src:ep.url,k:"podcast:"+ep.url,provider:"podcast",podcastUrl:ep.url,dur:0});
+  play([t],0);
+  au.addEventListener("loadedmetadata",function restorePodcastPosition(){
+    au.removeEventListener("loadedmetadata",restorePodcastPosition);
+    var pos=podcastPos[ep.url]||0;
+    if(pos>0&&isFinite(au.duration)&&pos<au.duration)au.currentTime=pos;
+  });
+  toast("Reproduciendo: "+ep.title);
+ }catch(e){toast("No se pudo abrir el episodio")}
+}
+function podcastSave(i){
+ var ep=podcastEpisodes[i];if(!ep)return;
+ var a=document.createElement("a");a.href=ep.url;a.download=(ep.title||"episodio").replace(/[\\/:*?"<>|]/g,"_");a.rel="noopener";document.body.appendChild(a);a.click();a.remove();
+ toast("Descarga solicitada; depende del permiso del feed y del navegador");
+}
+try{podcastPos=JSON.parse(localStorage.getItem("sb_podcast_pos")||"{}")}catch(e){}
 function onlineSearch(){
   clearTimeout(streamTimer);streamResults=[];streamRequest++;
   var token=streamRequest,box=$("streambox"),term=(q||"").trim();

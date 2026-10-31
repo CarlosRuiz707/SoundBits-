@@ -30,3 +30,23 @@ Esta versión es una primera integración segura de diseño y optimización. No 
 ### Firma de Android
 
 Para actualizar una instalación existente, conserva de forma privada la misma clave de firma que usaste para publicar SoundBits 1.8. No compartas `tunebox.jks` ni sus contraseñas. Antes de distribuir, migra las credenciales de firma a secretos locales o de CI; no cambies la clave de firma si necesitas mantener la ruta de actualización.
+
+
+## SoundBits 2.1 — Audio, podcasts y descargas
+
+- Añadida búsqueda de programas en el catálogo de Apple Podcasts/iTunes.
+- Consulta de episodios desde el endpoint de episodios de iTunes cuando está disponible y lectura de RSS cuando el feed está expuesto por CORS.
+- Reproducción web de episodios y guardado de posición en almacenamiento local; el botón de descarga solicita guardar el archivo cuando el servidor lo permite.
+- Se conserva la apariencia visual existente; Podcasts se integra dentro de la pantalla Buscar.
+- LRCLIB ya está integrado para letras sincronizadas y búsqueda por artista/título.
+- El catálogo musical online continúa limitado a contenido con licencia identificada como compatible.
+
+### Límites y siguientes integraciones
+
+Spotify requiere OAuth/credenciales para endpoints que no sean públicos; no se simula una integración autenticada. SponsorBlock y Return YouTube Dislike solo tienen sentido para contenido de YouTube con identificadores de vídeo, y esta versión base no reproduce YouTube. No se afirma que esas integraciones estén activas. Las API de Voxtrona no se han podido identificar como endpoints públicos en el código fuente entregado; deben configurarse con sus rutas y autenticación oficiales antes de invocarlas.
+
+### SoundBits 2.1 — streaming y podcasts en segundo plano
+- La reproducción de episodios reutiliza el reproductor de audio principal, por lo que aprovecha la sesión multimedia/notificación y el servicio Android ya configurados.
+- Se guarda periódicamente la posición de los episodios en `localStorage` y se intenta restaurar al volver a reproducirlos.
+- El streaming online de música sigue usando el catálogo de Internet Archive filtrado por licencias compatibles y el proxy con soporte HTTP Range; no se presenta como acceso al catálogo comercial de Voxtrona.
+- El ZIP de Voxtrona proporcionado contiene un sitio web de presentación y enlaces de descarga, pero no se encontraron endpoints de streaming ni documentación de API en el código inspeccionado. Para integrar Voxtrona directamente hace falta su endpoint oficial de búsqueda/resolución de audio y el mecanismo de autorización, si lo requiere. No se debe inventar una API ni extraer streams de fuentes protegidas.
