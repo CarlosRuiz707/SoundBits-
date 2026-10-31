@@ -50,3 +50,11 @@ Spotify requiere OAuth/credenciales para endpoints que no sean públicos; no se 
 - Se guarda periódicamente la posición de los episodios en `localStorage` y se intenta restaurar al volver a reproducirlos.
 - El streaming online de música sigue usando el catálogo de Internet Archive filtrado por licencias compatibles y el proxy con soporte HTTP Range; no se presenta como acceso al catálogo comercial de Voxtrona.
 - El ZIP de Voxtrona proporcionado contiene un sitio web de presentación y enlaces de descarga, pero no se encontraron endpoints de streaming ni documentación de API en el código inspeccionado. Para integrar Voxtrona directamente hace falta su endpoint oficial de búsqueda/resolución de audio y el mecanismo de autorización, si lo requiere. No se debe inventar una API ni extraer streams de fuentes protegidas.
+
+
+## SoundBits 2.2 — importación por enlace y letras
+- Se añade importador de enlaces públicos RSS, M3U, JSON/CSV con URLs de audio y enlaces directos a archivos de audio.
+- Los enlaces de Spotify/YouTube se detectan y muestran el requisito de usar sus integraciones oficiales; no se simula acceso a audio protegido.
+- LRCLIB: si la consulta exacta no devuelve letra, se intenta la búsqueda avanzada y se priorizan coincidencias por título/artista y letras sincronizadas.
+- Se mejora el auto-seguimiento visual de líneas sincronizadas y el gesto horizontal del área de portada.
+- Límites: RSS/playlist remota puede fallar si el host bloquea CORS; playlists comerciales requieren OAuth/API y fuente de audio permitida. No se ha compilado ni probado en un dispositivo en esta sesión.
