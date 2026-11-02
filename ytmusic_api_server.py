@@ -2,9 +2,6 @@ import argparse
 import json
 import os
 import sys
-import urllib.parse
-import urllib.request
-import urllib.error
 from flask import Flask, jsonify, request
 from ytmusicapi import YTMusic
 
@@ -12,97 +9,20 @@ app = Flask(__name__)
 
 OAUTH_FILE = os.path.join(os.path.dirname(__file__), 'oauth.json')
 
-# Adaptador intercambiable de API. Por defecto se conserva ytmusicapi.
-# Para probar la ruta inventada: API_PROVIDER=revanced y API_BASE_URL=https://api.revanced.app/v4
-API_PROVIDER = os.environ.get('API_PROVIDER', 'ytmusicapi').strip().lower()
-API_BASE_URL = os.environ.get('API_BASE_URL', 'https://api.revanced.app/v4').rstrip('/')
-YOUTUBE_DATA_API_KEY = os.environ.get('YOUTUBE_DATA_API_KEY', '').strip()
-YOUTUBE_DATA_API_BASE_URL = os.environ.get(
-    'YOUTUBE_DATA_API_BASE_URL', 'https://www.googleapis.com/youtube/v3'
-).rstrip('/')
 
-
-def external_search(query):
-    """Busca con proveedor HTTP configurable y normaliza la respuesta."""
-    if API_PROVIDER == 'revanced':
-        url = API_BASE_URL + '/search?' + urllib.parse.urlencode({'q': query})
-        req = urllib.request.Request(url, headers={'Accept': 'application/json', 'User-Agent': 'SoundBits/1.0'})
-        with urllib.request.urlopen(req, timeout=12) as response:
-            payload = json.loads(response.read().decode('utf-8'))
-        items = payload.get('items', payload.get('results', [])) if isinstance(payload, dict) else payload
-        normalized = []
-        for item in items or []:
-            if not isinstance(item, dict):
-                continue
-            video_id = item.get('videoId') or item.get('id')
-            if isinstance(video_id, dict):
-                video_id = video_id.get('videoId')
-            normalized.append({
-                'id': video_id,
-                'title': item.get('title') or item.get('name') or 'Sin título',
-                'artist': item.get('artist') or item.get('channelTitle') or item.get('channel') or 'YouTube',
-                'album': item.get('album') or 'YouTube',
-                'art': item.get('art') or item.get('thumbnail') or item.get('thumbnailUrl') or '',
-                'type': item.get('type') or 'song',
-                'provider': 'revanced',
-                'source': 'youtube',
-                'url': item.get('url') or (f"https://www.youtube.com/watch?v={video_id}" if video_id else ''),
-                'duration': item.get('duration') or 0,
-            })
-        return normalized
-
-    if API_PROVIDER == 'youtube_data_api':
-        if not YOUTUBE_DATA_API_KEY:
-            raise RuntimeError('Falta YOUTUBE_DATA_API_KEY en las variables de entorno.')
-        params = urllib.parse.urlencode({
-            'part': 'snippet', 'q': query, 'type': 'video', 'maxResults': 10,
-            'videoEmbeddable': 'true', 'key': YOUTUBE_DATA_API_KEY,
-        })
-        url = YOUTUBE_DATA_API_BASE_URL + '/search?' + params
-        req = urllib.request.Request(url, headers={'Accept': 'application/json'})
-        with urllib.request.urlopen(req, timeout=12) as response:
-            payload = json.loads(response.read().decode('utf-8'))
-        normalized = []
-        for item in payload.get('items', []):
-            snippet = item.get('snippet') or {}
-            video_id = (item.get('id') or {}).get('videoId')
-            thumbnails = snippet.get('thumbnails') or {}
-            thumb = thumbnails.get('high') or thumbnails.get('medium') or thumbnails.get('default') or {}
-            normalized.append({
-                'id': video_id,
-                'title': snippet.get('title') or 'Sin título',
-                'artist': snippet.get('channelTitle') or 'YouTube',
-                'album': 'YouTube',
-                'art': thumb.get('url', ''),
-                'type': 'song',
-                'provider': 'youtube_data_api',
-                'source': 'youtube',
-                'url': f'https://www.youtube.com/watch?v={video_id}' if video_id else '',
-                'duration': 0,
-            })
-        return normalized
-
-    raise RuntimeError(f'Proveedor HTTP no compatible: {API_PROVIDER}')
-
-
-def get_yt(require_auth=False):
-    # La búsqueda pública funciona sin OAuth. Las operaciones que modifican
-    # la biblioteca del usuario sí necesitan oauth.json.
-    if os.path.exists(OAUTH_FILE):
-        return YTMusic(OAUTH_FILE)
-    if require_auth:
+def get_yt():
+    if not os.path.exists(OAUTH_FILE):
         raise RuntimeError(
-            'Esta operación requiere oauth.json. Configura OAuth de YouTube Music.'
+            'No existe oauth.json. Genera la autenticación con: python -m ytmusicapi oauth'
         )
-    return YTMusic()
+    return YTMusic(OAUTH_FILE)
 
 
 def thumb_url(item):
-    thumbs = item.get('thumbnails') or []
-    if isinstance(thumbs, list):
-        for thumb in reversed(thumbs):
-            if isinstance(thumb, dict) and thumb.get('url'):
-                return thumb['url']
+    for key in ('high', 'medium', 'default'):
+        thumb = (item.get('thumbnails') or [{}])[-1]
+        if isinstance(thumb, dict) and thumb.get('url'):
+            return thumb['url']
     return ''
 
 
@@ -183,39 +103,23 @@ def create_playlist_from_query(title, description, query, limit=1):
 
 @app.get('/health')
 def health():
-    if API_PROVIDER in ('revanced', 'youtube_data_api'):
-        return jsonify({
-            'ok': True,
-            'provider': API_PROVIDER,
-            'baseUrl': API_BASE_URL if API_PROVIDER == 'revanced' else YOUTUBE_DATA_API_BASE_URL,
-            'apiKeyConfigured': bool(YOUTUBE_DATA_API_KEY) if API_PROVIDER == 'youtube_data_api' else None,
-            'note': 'La disponibilidad remota se confirma al ejecutar una búsqueda.'
-        })
     try:
         get_yt()
-        return jsonify({'ok': True, 'provider': 'ytmusicapi', 'message': 'YouTube Music disponible', 'oauthConfigured': os.path.exists(OAUTH_FILE)})
+        return jsonify({'ok': True, 'provider': 'youtube', 'message': 'OAuth de YouTube Music listo'})
     except Exception as exc:
-        return jsonify({'ok': False, 'provider': 'ytmusicapi', 'error': str(exc)}), 503
+        return jsonify({'ok': False, 'provider': 'youtube', 'error': str(exc)}), 503
 
 
 @app.get('/search')
 def search():
-    query = request.args.get('q', '').strip()
-    if not query:
-        return jsonify({'error': 'Falta el parámetro q'}), 400
-
-    if API_PROVIDER in ('revanced', 'youtube_data_api'):
-        try:
-            return jsonify(external_search(query))
-        except urllib.error.HTTPError as exc:
-            return jsonify({'error': f'La API externa respondió HTTP {exc.code}', 'provider': API_PROVIDER}), exc.code
-        except Exception as exc:
-            return jsonify({'error': str(exc), 'provider': API_PROVIDER}), 502
-
     try:
         yt = get_yt()
     except Exception as exc:
         return jsonify({'error': str(exc)}), 503
+
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify({'error': 'Falta el parámetro q'}), 400
 
     results = []
 
@@ -243,7 +147,7 @@ def search():
 @app.post('/playlist/create')
 def create_playlist():
     try:
-        yt = get_yt(require_auth=True)
+        yt = get_yt()
     except Exception as exc:
         return jsonify({'error': str(exc)}), 503
 
@@ -265,7 +169,7 @@ def create_playlist():
 @app.post('/playlist/add')
 def add_playlist_items():
     try:
-        yt = get_yt(require_auth=True)
+        yt = get_yt()
     except Exception as exc:
         return jsonify({'error': str(exc)}), 503
 
