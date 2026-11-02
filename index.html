@@ -265,7 +265,7 @@ function emptyHome(){return '<div class="card" style="text-align:center;padding:
 function render(){Ls=[];CTX=open?(open.t=="fav"?"Canciones que te gustan":open.t=="list"?(lists[open.k]||{}).name:open.k):tab=="search"?"Búsqueda":tab=="lib"?"Tu biblioteca":chip=="Todo"?"Inicio":chip;var h="",a;
   document.querySelectorAll("#nav button").forEach(function(b){b.classList.toggle("on",b.dataset.t==tab)});
   if(open){var c=colOf(open),l=lst(c.tr);h='<button class="bk" data-back="1">‹ Volver</button><div class="hero2">'+cover(c.n,"",c.tr[0])+'<h1>'+esc(c.n)+'</h1><div class="a">'+c.s+' · '+c.tr.length+' canciones</div></div><div class="pbtns"><button data-pl="'+l+'">▶ Reproducir</button><button data-pl="'+l+'s">⇄ Aleatorio</button></div>'+(open.t!="list"?seg("sort",[["az","A–Z"],["added","Recién añadidas"]]):'')+(open.t=="list"?'<div class="pbtns"><button data-pren="'+open.k+'">Renombrar</button><button data-pdel="'+open.k+'">Eliminar</button></div>':'')+list(c.tr)}
-  else if(tab=="set"){h=settingsView()}else if(tab=="search"){h='<div class="th">'+avBtn()+'<h1>Buscar</h1></div><input type="text" id="q" placeholder="¿Qué quieres escuchar?" value="'+esc(q)+'"><div id="res">'+res()+'</div><div class="card" style="margin-top:18px"><b>Explorar en línea</b><div class="a" style="margin:4px 0 10px">Busca música, podcasts y episodios en servicios públicos.</div><div class="chips"><button data-online="music">Música</button><button data-online="podcast">Podcasts</button></div><div id="online-results"></div></div>'}
+  else if(tab=="set"){h=settingsView()}else if(tab=="search"){h='<div class="th">'+avBtn()+'<h1>Buscar</h1></div><input type="text" id="q" placeholder="¿Qué quieres escuchar?" value="'+esc(q)+'"><div id="res">'+res()+'</div>'}
   else if(tab=="lib"){h=libView()}else{h='<div class="hh">'+avBtn()+'<div class="chips">'+["Todo","Canciones","Playlists","Artistas","Géneros","Álbumes"].map(function(g){return '<button data-chip="'+g+'" class="'+(g==chip?'on':'')+'">'+g+'</button>'}).join("")+'</div></div>';
     if(!lib.length)h+=emptyHome();
     else if(chip=="Todo"){var rec=recs();h+=(S.sec.quick?tiles():'')+(S.sec.rec&&rec.length?'<h3>Escuchado recientemente</h3>'+shelf(rec):'')+(S.sec.mix?mixes():'')+(S.sec.top?topH():'')+(S.sec.art?'<h3>Tus artistas</h3>'+shl(uniq("artist"),"artist"):'')+(S.sec.gen?'<h3>Tus géneros</h3>'+shl(uniq("genre"),"genre"):'')+(S.sec.alb?'<h3>Tus álbumes</h3>'+shl(uniq("album"),"album"):'')}
@@ -507,72 +507,6 @@ $("mdv").innerHTML=ICO.dev;$("mdv").onclick=function(){devSheet()};
 setTimeout(function(){var sp=$("splash");sp.classList.add("out");setTimeout(function(){sp.remove()},520)},2700);
 rs();draw();lsS();ld();applyS();render();if(AN)try{S.vol=Android.getVol();$("vol").value=S.vol}catch(e){}if(AN){var cl=loadLib();if(cl.length)setLib(cl);scanNative()}
 document.addEventListener("visibilitychange",function(){if(!document.hidden&&AN)scanNative(true)});
-
-/* SoundBits online integrations: public catalog search + LRCLIB lyrics.
-   These endpoints are client-side alternatives; ytmusicapi itself requires Python. */
-(function(){
-  var onlineBusy=false;
-  function onlineBox(){return $("online-results")}
-  function onlineMsg(s){var b=onlineBox();if(b)b.innerHTML='<div class="a" style="padding:10px 0">'+esc(s)+'</div>'}
-  function trackRow(title,artist,album,art,url,dur,kind,extra){
-    return '<div class="row"><div class="cv" style="background:'+bg(album||title)+'">'+(art?'<img src="'+esc(art)+'" alt="" onerror="this.remove()">':'♫')+'</div><div class="m" style="cursor:default"><div class="t">'+esc(title)+'</div><div class="a">'+esc(artist)+(album?' · '+esc(album):'')+'</div></div>'+(url?'<button class="ib" data-online-play="1" data-url="'+esc(url)+'" data-title="'+esc(title)+'" data-artist="'+esc(artist)+'" data-album="'+esc(album||"SoundBits Online")+'" data-art="'+esc(art||"")+'" data-dur="'+(dur||0)+'">▶</button>':'')+(extra||'')+'</div>'
-  }
-  async function searchOnline(kind){
-    var term=($("q")&&$("q").value||q||"").trim();
-    if(!term){onlineMsg("Escribe primero el nombre de una canción, artista o podcast en Buscar.");return}
-    onlineMsg("Buscando…");
-    try{
-      if(kind==="music"){
-        var r=await fetch("https://itunes.apple.com/search?term="+encodeURIComponent(term)+"&entity=song&limit=20");
-        if(!r.ok)throw Error("Servicio de música no disponible");
-        var d=await r.json();
-        if(!d.results.length){onlineMsg("No se encontraron canciones.");return}
-        onlineBox().innerHTML='<div class="a" style="margin-bottom:6px">Catálogo de iTunes · las muestras disponibles suelen durar unos 30 segundos.</div>'+d.results.map(function(x){return trackRow(x.trackName,x.artistName,x.collectionName,x.artworkUrl100,x.previewUrl,Math.round((x.trackTimeMillis||0)/1000),"music")}).join("");
-      }else{
-        var r=await fetch("https://itunes.apple.com/search?term="+encodeURIComponent(term)+"&entity=podcast&limit=15");
-        if(!r.ok)throw Error("Servicio de podcasts no disponible");
-        var d=await r.json();
-        if(!d.results.length){onlineMsg("No se encontraron podcasts.");return}
-        onlineBox().innerHTML=d.results.map(function(x){return trackRow(x.collectionName,x.artistName,"Podcast",x.artworkUrl100,"",0,"podcast",'<button data-podcast-feed="'+esc(x.feedUrl||"")+'" data-podcast-title="'+esc(x.collectionName)+'">Episodios</button>')}).join("");
-      }
-    }catch(e){onlineMsg("No se pudo conectar. Comprueba tu conexión e inténtalo otra vez. Algunos servicios pueden bloquear solicitudes desde ciertos WebView.")}
-  }
-  document.addEventListener("click",function(e){
-    var b=e.target.closest("[data-online]");
-    if(b){searchOnline(b.getAttribute("data-online"));return}
-    var p=e.target.closest("[data-online-play]");
-    if(p){
-      var src=p.getAttribute("data-url");if(!src){toast("Este resultado no ofrece una muestra reproducible.");return}
-      var t=mk({title:p.dataset.title,artist:p.dataset.artist,album:p.dataset.album,art:p.dataset.art,src:src,dur:+p.dataset.dur||30,genre:"Online",added:Date.now()});
-      play([t],0);toast("Reproduciendo muestra en línea");return
-    }
-    var f=e.target.closest("[data-podcast-feed]");
-    if(f){
-      var feed=f.getAttribute("data-podcast-feed");if(!feed){toast("Este podcast no publicó un feed RSS.");return}
-      onlineMsg("Cargando episodios…");
-      fetch(feed).then(function(r){if(!r.ok)throw Error();return r.text()}).then(function(tx){
-        var xml=new DOMParser().parseFromString(tx,"text/xml"),items=Array.from(xml.querySelectorAll("item")).slice(0,30);
-        if(!items.length){onlineMsg("No se encontraron episodios en el feed.");return}
-        onlineBox().innerHTML='<b style="display:block;margin:8px 0">Episodios · '+esc(f.dataset.podcastTitle)+'</b>'+items.map(function(it){
-          var title=it.querySelector("title")?.textContent||"Episodio",desc=it.querySelector("description")?.textContent||"",enc=it.querySelector("enclosure"),url=enc&&enc.getAttribute("url"),date=it.querySelector("pubDate")?.textContent||"";
-          return trackRow(title,date,"Episodio", "",url,0,"podcast",'<span class="a"> </span>')
-        }).join("")
-      }).catch(function(){onlineMsg("No se pudo leer el RSS desde esta aplicación. El servidor del podcast puede bloquear el acceso directo.")});
-    }
-  });
-  // When a song has no saved lyrics, try LRCLIB and keep the result for next time.
-  var originalLyBuild=window.lyBuild;
-  window.lyBuild=function(){
-    if(typeof originalLyBuild==="function")originalLyBuild();
-    var t=queue[qi];if(!t||LY[t.k]||t._lyFetch)return;
-    t._lyFetch=true;
-    fetch("https://lrclib.net/api/get?artist_name="+encodeURIComponent(t.artist)+"&track_name="+encodeURIComponent(t.title)+"&album_name="+encodeURIComponent(t.album)+"&duration="+Math.round(au.duration||t.dur||0))
-      .then(function(r){if(!r.ok)throw Error();return r.json()})
-      .then(function(d){var text=d.syncedLyrics||d.plainLyrics;if(!text||!queue[qi]||queue[qi].k!==t.k)return;LY[t.k]=text;saveLY();delete LP[t.k];if($("ly").classList.contains("show"))originalLyBuild()})
-      .catch(function(){t._lyFetch=false});
-  };
-})();
-
 </script>
 </body>
 </html>
