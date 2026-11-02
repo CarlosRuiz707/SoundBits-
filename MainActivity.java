@@ -606,6 +606,16 @@ public class MainActivity extends Activity {
         return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(results.toString().getBytes("UTF-8")));
       }
       if (path.equals("/streamfile")) return streamArchive(r, hd);
+      if (path.equals("/jm")) {
+        String cid = u.getQueryParameter("client_id");
+        if (cid == null || cid.trim().isEmpty()) return err(hd, 401);
+        StringBuilder jb = new StringBuilder("https://api.jamendo.com/v3.0/tracks/?format=json&limit=20&audioformat=mp32&include=musicinfo&client_id=").append(enc2(cid.trim()));
+        for (String jk : new String[]{"search", "order", "tags"}) {
+          String jv = u.getQueryParameter(jk);
+          if (jv != null && !jv.isEmpty()) jb.append('&').append(jk).append('=').append(enc2(jv));
+        }
+        return jsonResp(hd, httpGet2(jb.toString()));
+      }
       if (path.equals("/pf")) return proxyMedia(r, hd);
       if (path.startsWith("/o/")) {
         String oid = u.getLastPathSegment();
