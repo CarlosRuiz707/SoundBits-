@@ -301,6 +301,21 @@ function render(){
   obs();
   if(tab=="search"&&!open)onlineSearch();
 }
+
+// Inicialización de la interfaz: el HTML anterior definía render(), pero nunca
+// construía la navegación ni dibujaba la primera pantalla.
+(function bootTuneBox(){
+  var nav=$("nav");
+  if(nav && !nav.children.length){
+    var items=[["home","Inicio"],["search","Buscar"],["lib","Biblioteca"],["pod","Podcasts"],["set","Ajustes"]];
+    nav.innerHTML=items.map(function(it){return '<button type="button" data-t="'+it[0]+'">'+(typeof svt==='function'&&typeof NI==='object'?svt(NI[it[0]]):'<b>♪</b>')+'<span>'+it[1]+'</span></button>';}).join('');
+  }
+  if(nav) nav.addEventListener('click',function(e){var b=e.target.closest('button[data-t]');if(!b)return;tab=b.dataset.t;open=null;render();});
+  try{if(typeof ld==='function')ld();}catch(e){}
+  try{if(typeof render==='function')render();}catch(e){var m=$("main");if(m)m.innerHTML='<div class="card"><b>No se pudo iniciar TuneBox</b><p>La interfaz encontró un error al iniciar. Reinicia la aplicación.</p></div>'; }
+  if(AN && typeof window.scanNative==='function'){try{window.scanNative();}catch(e){}}
+})();
+
 </script>
 </body>
 </html>
