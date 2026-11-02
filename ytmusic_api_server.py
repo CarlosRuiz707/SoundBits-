@@ -67,6 +67,37 @@ def normalize_artist(item):
     }
 
 
+def create_playlist_from_query(title, description, query, limit=1):
+    yt = get_yt()
+    playlist_id = yt.create_playlist(title, description)
+
+    if not query:
+        return {
+            'playlistId': playlist_id,
+            'title': title,
+            'description': description,
+            'added': []
+        }
+
+    search_results = yt.search(query, filter='songs', limit=limit)
+    if not search_results:
+        raise ValueError(f'No se encontraron resultados para: {query}')
+
+    video_id = search_results[0].get('videoId')
+    if not video_id:
+        raise ValueError(f'No se pudo obtener videoId para: {query}')
+
+    yt.add_playlist_items(playlist_id, [video_id])
+    return {
+        'playlistId': playlist_id,
+        'title': title,
+        'description': description,
+        'videoId': video_id,
+        'query': query,
+        'added': [video_id]
+    }
+
+
 @app.get('/health')
 def health():
     try:
@@ -108,6 +139,83 @@ def search():
         pass
 
     return jsonify(results[:20])
+
+
+@app.post('/playlist/create')
+def create_playlist():
+    try:
+        yt = get_yt()
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 503
+
+    payload = request.get_json(silent=True) or {}
+    title = (payload.get('title') or 'Tunebox Playlist').strip() or 'Tunebox Playlist'
+    description = (payload.get('description') or 'Creada desde Tunebox').strip()
+
+    try:
+        playlist_id = yt.create_playlist(title, description)
+        return jsonify({
+            'playlistId': playlist_id,
+            'title': title,
+            'description': description,
+        })
+    except Exception as exc:
+        return jsonify({'error': f'Error creando playlist: {exc}'}), 500
+
+
+@app.post('/playlist/add')
+def add_playlist_items():
+    try:
+        yt = get_yt()
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 503
+
+    payload = request.get_json(silent=True) or {}
+    playlist_id = payload.get('playlistId') or payload.get('playlist_id')
+    video_id = payload.get('videoId') or payload.get('video_id')
+    query = (payload.get('query') or payload.get('q') or '').strip()
+
+    if not playlist_id:
+        return jsonify({'error': 'Falta playlistId'}), 400
+
+    try:
+        if video_id:
+            ids = [video_id]
+        elif query:
+            search_results = yt.search(query, filter='songs', limit=1)
+            if not search_results:
+                return jsonify({'error': f'No se encontraron resultados para: {query}'}), 404
+            ids = [search_results[0].get('videoId')]
+            if not ids[0]:
+                return jsonify({'error': f'No se pudo obtener videoId para: {query}'}), 400
+        else:
+            return jsonify({'error': 'Falta videoId o query'}), 400
+
+        yt.add_playlist_items(playlist_id, ids)
+        return jsonify({
+            'playlistId': playlist_id,
+            'videoId': ids[0],
+            'added': ids,
+        })
+    except Exception as exc:
+        return jsonify({'error': f'Error agregando a la playlist: {exc}'}), 500
+
+
+@app.post('/playlist/create-and-add')
+def create_and_add_playlist():
+    payload = request.get_json(silent=True) or {}
+    title = (payload.get('title') or 'Tunebox Playlist').strip() or 'Tunebox Playlist'
+    description = (payload.get('description') or 'Creada desde Tunebox').strip()
+    query = (payload.get('query') or payload.get('q') or '').strip()
+
+    if not query:
+        return jsonify({'error': 'Falta el parámetro query'}), 400
+
+    try:
+        result = create_playlist_from_query(title, description, query)
+        return jsonify(result)
+    except Exception as exc:
+        return jsonify({'error': str(exc)}), 500
 
 
 @app.get('/artist/<path:query>')
@@ -185,3 +293,4 @@ def album(query):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 3000)), debug=False)
+
