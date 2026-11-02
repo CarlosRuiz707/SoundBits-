@@ -18,6 +18,24 @@ import android.provider.MediaStore;
 import android.util.Size;
 import android.view.View;
 import android.webkit.*;
+import android.os.CancellationSignal;
+import androidx.annotation.NonNull;
+import androidx.credentials.ClearCredentialStateRequest;
+import androidx.credentials.Credential;
+import androidx.credentials.CredentialManager;
+import androidx.credentials.CredentialManagerCallback;
+import androidx.credentials.CustomCredential;
+import androidx.credentials.GetCredentialRequest;
+import androidx.credentials.GetCredentialResponse;
+import androidx.credentials.exceptions.GetCredentialException;
+import androidx.credentials.exceptions.ClearCredentialException;
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 import org.json.*;
 import java.io.*;
 import java.net.*;
@@ -34,10 +52,13 @@ public class MainActivity extends Activity {
   volatile boolean wifiOnly = true;
   String artKey = "";
   Bitmap artBm;
+  FirebaseAuth firebaseAuth;
+  CredentialManager credentialManager;
 
   protected void onCreate(Bundle b) {
     super.onCreate(b);
     inst = this;
+    initAuthentication();
     boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
     w = new WebView(this);
     w.setBackgroundColor(dark ? Color.BLACK : Color.WHITE);
@@ -57,6 +78,7 @@ public class MainActivity extends Activity {
         return true;
       }
       public void onPageFinished(WebView v, String url) {
+        publishAuthState();
         if (pendingCmd != null) {
           final String c = pendingCmd; pendingCmd = null;
           v.postDelayed(new Runnable() { public void run() { js("window.tbCmd&&tbCmd('" + c + "')"); } }, 1500);
@@ -78,6 +100,106 @@ public class MainActivity extends Activity {
     else ps.add("android.permission.READ_EXTERNAL_STORAGE");
     if (Build.VERSION.SDK_INT >= 31) ps.add("android.permission.BLUETOOTH_CONNECT");
     requestPermissions(ps.toArray(new String[0]), 2);
+  }
+
+  private void initAuthentication() {
+    try {
+      if (!FirebaseApp.getApps(this).isEmpty()) {
+        firebaseAuth = FirebaseAuth.getInstance();
+        credentialManager = CredentialManager.create(getBaseContext());
+      }
+    } catch (Exception e) {
+      firebaseAuth = null;
+      credentialManager = null;
+    }
+  }
+
+  private boolean authConfigured() {
+    return firebaseAuth != null && credentialManager != null;
+  }
+
+  private JSONObject authStateJson() {
+    JSONObject out = new JSONObject();
+    try {
+      FirebaseUser u = authConfigured() ? firebaseAuth.getCurrentUser() : null;
+      out.put("configured", authConfigured());
+      out.put("signedIn", u != null);
+      if (u != null) {
+        out.put("uid", u.getUid());
+        out.put("name", u.getDisplayName() == null ? "" : u.getDisplayName());
+        out.put("email", u.getEmail() == null ? "" : u.getEmail());
+        out.put("photo", u.getPhotoUrl() == null ? "" : u.getPhotoUrl().toString());
+        out.put("provider", "google.com");
+      }
+    } catch (Exception e) {
+      try { out.put("configured", false); out.put("signedIn", false); } catch (Exception ignored) {}
+    }
+    return out;
+  }
+
+  private void publishAuthState() {
+    js("window.onNativeAuthChanged&&window.onNativeAuthChanged(" + authStateJson().toString() + ")");
+  }
+
+  private void startGoogleSignIn() {
+    if (!authConfigured()) {
+      js("window.onNativeAuthError&&window.onNativeAuthError('Configura Firebase y agrega google-services.json para activar Google Sign-In.')");
+      return;
+    }
+    try {
+      GetGoogleIdOption googleOption = new GetGoogleIdOption.Builder()
+          .setFilterByAuthorizedAccounts(false)
+          .setServerClientId(getString(getResources().getIdentifier("default_web_client_id", "string", getPackageName())))
+          .build();
+      GetCredentialRequest request = new GetCredentialRequest.Builder()
+          .addCredentialOption(googleOption)
+          .build();
+      credentialManager.getCredentialAsync(this, request, new CancellationSignal(),
+          Executors.newSingleThreadExecutor(), new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+            @Override public void onResult(GetCredentialResponse result) {
+              handleGoogleCredential(result.getCredential());
+            }
+            @Override public void onError(@NonNull GetCredentialException e) {
+              js("window.onNativeAuthError&&window.onNativeAuthError(" + JSONObject.quote(authErrorMessage(e)) + ")");
+            }
+          });
+    } catch (Exception e) {
+      js("window.onNativeAuthError&&window.onNativeAuthError(" + JSONObject.quote(authErrorMessage(e)) + ")");
+    }
+  }
+
+  private String authErrorMessage(Exception e) {
+    String m = e == null ? "No se pudo iniciar sesión." : e.getLocalizedMessage();
+    return m == null || m.trim().isEmpty() ? "No se pudo iniciar sesión con Google." : m;
+  }
+
+  private void handleGoogleCredential(Credential credential) {
+    try {
+      if (!(credential instanceof CustomCredential) ||
+          !GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL.equals(credential.getType())) {
+        js("window.onNativeAuthError&&window.onNativeAuthError('Google no devolvió una credencial válida.')");
+        return;
+      }
+      GoogleIdTokenCredential google = GoogleIdTokenCredential.createFrom(((CustomCredential) credential).getData());
+      AuthCredential firebaseCredential = GoogleAuthProvider.getCredential(google.getIdToken(), null);
+      firebaseAuth.signInWithCredential(firebaseCredential).addOnCompleteListener(this, task -> {
+        if (task.isSuccessful()) publishAuthState();
+        else js("window.onNativeAuthError&&window.onNativeAuthError(" + JSONObject.quote(authErrorMessage(task.getException())) + ")");
+      });
+    } catch (Exception e) {
+      js("window.onNativeAuthError&&window.onNativeAuthError(" + JSONObject.quote(authErrorMessage(e)) + ")");
+    }
+  }
+
+  private void signOutGoogle() {
+    if (!authConfigured()) return;
+    firebaseAuth.signOut();
+    ClearCredentialStateRequest clearRequest = new ClearCredentialStateRequest();
+    credentialManager.clearCredentialStateAsync(clearRequest, new CancellationSignal(),
+        Executors.newSingleThreadExecutor(), new CredentialManagerCallback<Void, ClearCredentialException>() {
+          @Override public void onResult(@NonNull Void result) { publishAuthState(); }
+          @Override public void onError(@NonNull ClearCredentialException e) { publishAuthState(); }
+        });
   }
 
   protected void onStop() {
@@ -621,6 +743,9 @@ public class MainActivity extends Activity {
   }
 
   class Br {
+    @JavascriptInterface public String getAuthState() { return authStateJson().toString(); }
+    @JavascriptInterface public void signInGoogle() { runOnUiThread(new Runnable() { public void run() { startGoogleSignIn(); } }); }
+    @JavascriptInterface public void signOutGoogle() { runOnUiThread(new Runnable() { public void run() { MainActivity.this.signOutGoogle(); } }); }
     @JavascriptInterface public String scan() {
       JSONArray a = new JSONArray();
       try (Cursor c = getContentResolver().query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,

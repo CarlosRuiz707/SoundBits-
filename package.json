@@ -1,0 +1,14 @@
+{
+  "name": "tunebox-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "srvr.mjs",
+  "scripts": {
+    "start": "node srvr.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "ytmusic-api": "^5.2.2"
+  }
+}
