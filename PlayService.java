@@ -4,14 +4,14 @@ import android.graphics.Bitmap;import android.graphics.drawable.Icon;import andr
 import android.media.session.MediaSession;import android.media.session.PlaybackState;import android.os.*;
 public class PlayService extends Service {
   static PlayService inst;
-  static String title = "SoundBits", artist = "", album = "", artKey = "";
+  static String title = "Tunebox", artist = "", album = "", artKey = "";
   static boolean playing = false; static Bitmap art; static long posMs = 0, durMs = 0;
   MediaSession ms; NotificationManager nm; Handler h = new Handler(Looper.getMainLooper()); boolean fg = false;
   public void onCreate() {
     super.onCreate(); inst = this;
     nm = getSystemService(NotificationManager.class);
     if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(new NotificationChannel("tb", "Reproducción", NotificationManager.IMPORTANCE_LOW));
-    ms = new MediaSession(this, "SoundBits");
+    ms = new MediaSession(this, "Tunebox");
     ms.setCallback(new MediaSession.Callback() {
       public void onPlay() { cmd("play"); }
       public void onPause() { cmd("pause"); }
