@@ -1,10 +1,5 @@
 plugins { id 'com.android.application' }
 
-// Firebase se activa automáticamente cuando se añade app/google-services.json.
-if (rootProject.file('app/google-services.json').exists()) {
-    apply plugin: 'com.google.gms.google-services'
-}
-
 // Coloca automaticamente los archivos sueltos de la raiz del repositorio (res_*.xml y *.java)
 // en las carpetas que Android espera. Funciona con el flujo de GitHub antiguo y con el nuevo.
 def rootFiles = rootProject.projectDir
@@ -31,7 +26,7 @@ preBuild.dependsOn 'arrange'
 android {
     namespace 'app.tunebox'
     compileSdk 34
-    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 12; versionName "2.1" }
+    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 8; versionName "1.7" }
     sourceSets { main { res.srcDir genRes; java.srcDir genJava } }
     signingConfigs {
         debug {
@@ -43,13 +38,4 @@ android {
     }
     buildTypes { release { minifyEnabled false } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-}
-
-
-dependencies {
-    implementation platform('com.google.firebase:firebase-bom:35.1.0')
-    implementation 'com.google.firebase:firebase-auth'
-    implementation 'androidx.credentials:credentials:1.3.0'
-    implementation 'androidx.credentials:credentials-play-services-auth:1.3.0'
-    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
 }
