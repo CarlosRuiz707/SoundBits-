@@ -495,6 +495,7 @@ public class MainActivity extends Activity {
         return serveFile(r, hd, of);
       }
       if (path.equals("/em")) return embedPage(u.getQueryParameter("u"), hd);
+      if (path.equals("/is")) return jsonResp(hd, httpGet2("https://itunes.apple.com/search?media=music&entity=song&limit=25&term=" + enc2(u.getQueryParameter("q"))));
       if (path.equals("/ps")) return jsonResp(hd, httpGet2("https://itunes.apple.com/search?media=podcast&entity=podcast&limit=20&term=" + enc2(u.getQueryParameter("q"))));
       if (path.equals("/mc")) return jsonResp(hd, httpGet2("https://api.mixcloud.com/search/?type=cloudcast&limit=10&q=" + enc2(u.getQueryParameter("q"))));
       if (path.equals("/pod")) {

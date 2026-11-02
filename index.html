@@ -181,6 +181,7 @@ h3{font-size:22px;letter-spacing:-.2px;margin:26px 0 12px}
 .gc .t{font-size:14px}.gc .cv{border-radius:var(--cr,4px)}
 .home-head{display:flex;align-items:center;justify-content:space-between;margin:8px 0 18px}.home-head .a{font-size:10px;letter-spacing:1.5px;font-weight:700}.home-head h1{font-size:30px}.home-shortcuts{display:flex;gap:10px;margin-top:22px}.home-shortcuts button{flex:1;background:var(--card);border-radius:14px;padding:15px 12px;text-align:left;font-size:13px}#nav button{font-size:11px;letter-spacing:.1px}#nav svg{width:23px;height:23px;margin-bottom:2px}
 </style>
+<style>.hs{margin:26px 0 10px;font-size:20px}.chips{display:flex;gap:8px;overflow-x:auto;margin:0 0 16px;padding-bottom:2px}.chips button{flex:none;background:var(--card);color:var(--tx);border-radius:18px;padding:8px 16px;font-size:13px;font-weight:600}.chips button.on{background:var(--ac);color:#000}.pchips{flex-wrap:wrap;overflow:visible}</style>
 </head>
 <body>
 <div id="splash"><div class="sb-px"></div><div class="sb-logo"><i></i><i></i><i></i><i></i><i></i></div><div class="sb-word" id="sbw"></div><div class="sb-hi">Bienvenido</div></div>
@@ -266,16 +267,86 @@ function emptyHome(){return '<div class="card" style="text-align:center;padding:
 function render(){Ls=[];CTX=open?(open.t=="fav"?"Canciones que te gustan":open.t=="list"?(lists[open.k]||{}).name:open.k):tab=="search"?"Búsqueda":tab=="lib"?"Tu biblioteca":chip=="Todo"?"Inicio":chip;var h="",a;
   document.querySelectorAll("#nav button").forEach(function(b){b.classList.toggle("on",b.dataset.t==tab)});
   if(open){var c=colOf(open),l=lst(c.tr);h='<button class="bk" data-back="1">‹ Volver</button><div class="hero2">'+cover(c.n,"",c.tr[0])+'<h1>'+esc(c.n)+'</h1><div class="a">'+c.s+' · '+c.tr.length+' canciones</div></div><div class="pbtns"><button data-pl="'+l+'">▶ Reproducir</button><button data-pl="'+l+'s">⇄ Aleatorio</button></div>'+(open.t!="list"?seg("sort",[["az","A–Z"],["added","Recién añadidas"]]):'')+(open.t=="list"?'<div class="pbtns"><button data-pren="'+open.k+'">Renombrar</button><button data-pdel="'+open.k+'">Eliminar</button></div>':'')+list(c.tr)}
-  else if(tab=="set"){h=settingsView()}else if(tab=="podcast"){h='<div class="th">'+avBtn()+'<h1>Podcast</h1></div><p class="a" style="margin:0 0 14px">Encuentra programas y explora sus episodios.</p><input type="text" id="q" placeholder="Buscar podcasts" value="'+esc(q)+'"><div class="chips"><button data-online="podcast">Buscar podcasts</button></div><div id="online-results"></div>'}else if(tab=="search"){h='<div class="th">'+avBtn()+'<h1>Buscar</h1></div><input type="text" id="q" placeholder="¿Qué quieres escuchar?" value="'+esc(q)+'"><div id="res">'+res()+'</div><div class="card" style="margin-top:18px"><b>Explorar en línea</b><div class="a" style="margin:4px 0 10px">Busca música, podcasts y episodios en servicios públicos.</div><div class="chips"><button data-online="music">Música</button><button data-online="podcast">Podcasts</button></div><div id="online-results"></div></div>'}
-  else if(tab=="lib"){h=libView()}else{h='<div class="home-head"><div><div class="a">TU ESPACIO MUSICAL</div><h1 style="margin:3px 0 0">Inicio</h1></div>'+avBtn()+'</div>';
-    if(!lib.length)h+=emptyHome();
-    else{var rec=recs();if(rec.length)h+='<h3 style="margin-top:26px">Seguir escuchando</h3>'+shelf(rec);h+='<div class="home-shortcuts"><button data-go="search">⌕ Buscar música</button><button data-go="podcast">▤ Explorar podcasts</button></div>'}}
+  else if(tab=="set"){h=settingsView()}else if(tab=="podcast"){h=podView()}else if(tab=="search"){h=searchView()}
+  else if(tab=="lib"){h=libView()}else{h=homeView()}
   $("main").innerHTML=h;obs()}
 function res(){if(!q){var gg=uniq("genre");return lib.length?'<h3>Explorar todo</h3><div class="grid">'+ks(gg).map(function(k){return '<div class="tile gt" data-open="genre_'+esc(k)+'" style="background:'+bg(k)+'"><b>'+esc(k)+'</b></div>'}).join("")+'</div>':'<div class="empty">Primero agrega música.</div>'}var k=q.toLowerCase();return list(lib.filter(function(t){return(t.title+" "+t.artist+" "+t.album).toLowerCase().indexOf(k)>-1}))}
+/* ===== Home estilo Spotify · Podcasts · Letras sincronizadas ===== */
+var POD={term:"",html:"",cur:null,ep:null,load:0},ONL={term:"",html:"",m:[]},LYF={},onT=0,pdT=0;
+var SUG=["Noticias","Tecnología","Comedia","Historia","Salud","Deportes","Negocios","Música","Cultura","Ciencia"];
+function enc(s){return encodeURIComponent(s==null?"":s)}
+function sb(u){return AN&&/^https:/.test(u)?"https://tb.local/pf?u="+enc(u):u}
+function chk(r){if(!r.ok)throw Error(r.status);return r.json()}
+function podSearch(t){return fetch(AN?"https://tb.local/ps?q="+enc(t):"https://itunes.apple.com/search?media=podcast&entity=podcast&limit=20&term="+enc(t)).then(chk)}
+function musSearch(t){return fetch(AN?"https://tb.local/is?q="+enc(t):"https://itunes.apple.com/search?media=music&entity=song&limit=25&term="+enc(t)).then(chk)}
+function podFeed(u){if(AN)return fetch("https://tb.local/pod?u="+enc(u)).then(chk);
+  return fetch(u).then(function(r){if(!r.ok)throw Error();return r.text()}).then(function(tx){var x=new DOMParser().parseFromString(tx,"text/xml"),g=function(n,s){var e=n.querySelector(s);return e?e.textContent:""};
+    return{title:g(x,"channel > title"),author:"",art:"",eps:Array.from(x.querySelectorAll("item")).slice(0,60).map(function(it){var en=it.querySelector("enclosure");return{t:g(it,"title"),u:en&&en.getAttribute("url"),p:g(it,"pubDate"),d:0}}).filter(function(e){return e.u})}})}
+function greet(){var h=new Date().getHours();return h<6?"Buenas noches":h<13?"Buenos días":h<20?"Buenas tardes":"Buenas noches"}
+function sugChips(){return '<div class="chips pchips">'+SUG.map(function(s){return '<button data-psug="'+s+'">'+s+'</button>'}).join("")+'</div>'}
+function homeView(){
+  var h='<div class="home-head"><h1 style="margin:0">'+greet()+'</h1>'+avBtn()+'</div><div class="chips hchips"><button class="on">Todo</button><button data-go="search">Música</button><button data-go="podcast">Podcasts</button></div>';
+  if(!lib.length)return h+emptyHome()+'<h3 style="margin-top:26px">Podcasts para explorar</h3>'+sugChips();
+  h+=tiles();
+  var rec=recs();if(rec.length)h+='<h3 class="hs">Escuchado recientemente</h3>'+shelf(rec);
+  if(typeof plays!="undefined"){var top=lib.filter(function(t){return plays[t.k]>0}).sort(function(a,b){return plays[b.k]-plays[a.k]}).slice(0,12);if(top.length)h+='<h3 class="hs">Tus más escuchadas</h3>'+shelf(top)}
+  var add=lib.slice().sort(function(a,b){return(b.added||0)-(a.added||0)}).slice(0,12);h+='<h3 class="hs">Añadido recientemente</h3>'+shelf(add);
+  if(!homeView.mix||homeView.n!=lib.length){homeView.n=lib.length;homeView.mix=lib.slice().sort(function(){return Math.random()-.5}).slice(0,12)}
+  h+='<h3 class="hs">Mix para ti</h3>'+shelf(homeView.mix,"");
+  h+='<h3 class="hs">Tus artistas</h3>'+shl(uniq("artist"),"artist")+'<h3 class="hs">Tus álbumes</h3>'+shl(uniq("album"),"album");
+  h+='<h3 class="hs">Podcasts para explorar</h3>'+sugChips()+'<h3 class="hs">Tus canciones</h3>'+list(lib);
+  return h}
+function searchView(){return '<div class="th">'+avBtn()+'<h1>Buscar</h1></div><input type="text" id="q" placeholder="¿Qué quieres escuchar?" value="'+esc(q)+'" autocomplete="off"><div id="res">'+res()+'</div><div id="online-results">'+(ONL.term&&ONL.term==q.trim()?ONL.html:"")+'</div>'}
+function rowCv(t,art){return '<div class="cv" style="background:'+bg(t)+'">'+(art?'<img src="'+esc(art)+'" alt="" onerror="this.remove()">':'♫')+'</div>'}
+function prow(x){return '<div class="row" data-pod="1" data-feed="'+esc(x.feedUrl||"")+'" data-pt="'+esc(x.collectionName)+'" data-pa="'+esc(x.artistName)+'" data-art="'+esc(x.artworkUrl600||x.artworkUrl100||"")+'">'+rowCv(x.collectionName,x.artworkUrl100)+'<div class="m"><div class="t">'+esc(x.collectionName)+'</div><div class="a">'+esc(x.artistName)+' · Podcast</div></div><span class="chev">›</span></div>'}
+function mrow(x,i){return '<div class="row">'+rowCv(x.collectionName,x.artworkUrl100)+'<div class="m"><div class="t">'+esc(x.trackName)+'</div><div class="a">'+esc(x.artistName)+(x.collectionName?' · '+esc(x.collectionName):'')+'</div></div><button class="ib" data-mi="'+i+'">▶</button></div>'}
+function podRes(){return POD.term.trim().length>1?POD.html:'<h3 style="margin-top:18px">Explora por tema</h3>'+sugChips()}
+function podView(){
+  if(POD.cur){var c=POD.cur,h='<button class="bk" data-pback="1">‹ Volver</button><div class="hero2"><div class="cv" style="background:'+bg(c.t)+'">'+(c.art?'<img src="'+esc(c.art)+'" alt="" onerror="this.remove()">':'')+'</div><h1>'+esc(c.t)+'</h1><div class="a">'+esc(c.a)+'</div></div>';
+    if(POD.load)return h+'<div class="a" style="padding:16px 0">Cargando episodios…</div>';
+    if(!POD.ep||!POD.ep.eps.length)return h+'<div class="empty">No se pudieron cargar los episodios. Revisa tu conexión o prueba otro podcast.</div>';
+    return h+'<div class="pbtns"><button data-pep="0">▶ Reproducir el último</button></div>'+POD.ep.eps.map(function(e,i){return '<div class="row"><div class="m" data-pep="'+i+'"><div class="t">'+esc(e.t)+'</div><div class="a">'+esc((e.p||"").slice(0,16))+(e.d?' · '+Math.max(1,Math.round(e.d/60))+' min':'')+'</div></div><button class="ib" data-pep="'+i+'">▶</button></div>'}).join("")}
+  return '<div class="th">'+avBtn()+'<h1>Podcast</h1></div><input type="text" id="pq" placeholder="Buscar podcasts" value="'+esc(POD.term)+'" autocomplete="off"><div id="pres">'+podRes()+'</div>'}
+function podRun(term){term=term.trim();var b=$("pres");if(!b)return;if(term.length<2){POD.html="";b.innerHTML=podRes();return}
+  b.innerHTML='<div class="a" style="padding:14px 0">Buscando…</div>';
+  podSearch(term).then(function(d){if(POD.term.trim()!=term)return;var r=(d.results||[]).filter(function(x){return x.feedUrl});POD.html=r.length?r.map(prow).join(""):'<div class="a" style="padding:14px 0">No se encontraron podcasts para «'+esc(term)+'».</div>';if($("pres"))$("pres").innerHTML=POD.html})
+  .catch(function(){if($("pres"))$("pres").innerHTML='<div class="a" style="padding:14px 0">No se pudo conectar. Comprueba tu conexión e inténtalo otra vez.</div>'})}
+function podOpen(c){tab="podcast";open=null;POD.cur=c;POD.ep=null;POD.load=1;render();scrollTo(0,0);
+  podFeed(c.feed).then(function(d){POD.ep=d;POD.load=0;if(POD.cur===c&&tab=="podcast")render()}).catch(function(){POD.load=0;if(POD.cur===c&&tab=="podcast")render()})}
+function podPlay(i){var e=POD.ep,c=POD.cur;if(!e)return;CTX="Podcast";
+  var tr=e.eps.map(function(x){var t=mk({title:x.t,artist:c.t,album:"Podcast",dur:x.d||0,genre:"Podcast",added:Date.now()});t.src=sb(x.u);t.art=x.a||c.art||e.art||"";return t});play(tr,i)}
+function onlineRun(){var term=q.trim(),b=$("online-results");if(!b)return;if(term.length<2){ONL.term="";ONL.html="";b.innerHTML="";return}
+  b.innerHTML='<div class="a" style="padding:14px 0">Buscando en línea…</div>';
+  Promise.all([musSearch(term).catch(function(){return null}),podSearch(term).catch(function(){return null})]).then(function(r){if(q.trim()!=term)return;
+    var m=(r[0]&&r[0].results||[]).filter(function(x){return x.previewUrl}),p=(r[1]&&r[1].results||[]).filter(function(x){return x.feedUrl}),h="";ONL.m=m;
+    if(m.length)h+='<h3 style="margin-top:20px">Canciones en línea</h3><div class="a" style="margin-bottom:6px">Muestras de 30 s</div>'+m.slice(0,10).map(mrow).join("");
+    if(p.length)h+='<h3 style="margin-top:20px">Podcasts</h3>'+p.slice(0,8).map(prow).join("");
+    if(!h)h='<div class="a" style="padding:14px 0">'+(r[0]===null&&r[1]===null?"No se pudo conectar. Comprueba tu conexión.":"Sin resultados en línea.")+'</div>';
+    ONL.term=term;ONL.html=h;if($("online-results"))$("online-results").innerHTML=h})}
+function mplay(i){var tr=ONL.m.map(function(x){var t=mk({title:x.trackName,artist:x.artistName,album:x.collectionName,dur:Math.round((x.trackTimeMillis||30000)/1000),genre:"Online",added:Date.now()});t.src=sb(x.previewUrl);t.art=(x.artworkUrl100||"").replace("100x100","400x400");return t});CTX="Búsqueda";play(tr,i);toast("Reproduciendo muestra de 30 s")}
+document.addEventListener("input",function(e){var i=e.target;
+  if(i.id=="q"&&tab=="search"){clearTimeout(onT);onT=setTimeout(onlineRun,550)}
+  if(i.id=="pq"){POD.term=i.value;clearTimeout(pdT);pdT=setTimeout(function(){podRun(POD.term)},450)}});
+document.addEventListener("click",function(e){var g,t=e.target;
+  if(g=t.closest("[data-psug]")){var s=g.dataset.psug;if(tab!="podcast"||POD.cur){tab="podcast";open=null;POD.cur=null;POD.ep=null}POD.term=s;render();podRun(s);scrollTo(0,0);return}
+  if(g=t.closest("[data-pod]")){podOpen({feed:g.dataset.feed,t:g.dataset.pt,a:g.dataset.pa,art:g.dataset.art});return}
+  if(g=t.closest("[data-pep]")){podPlay(+g.dataset.pep);return}
+  if(g=t.closest("[data-pback]")){POD.cur=null;POD.ep=null;render();return}
+  if(g=t.closest("[data-mi]")){mplay(+g.dataset.mi);return}});
+/* Letras: LRCLIB (vía proxy nativo) con sincronización por línea */
+function lyPick(d){if(!d)return"";if(Array.isArray(d)){var s=d.filter(function(x){return x.syncedLyrics})[0]||d.filter(function(x){return x.plainLyrics})[0];d=s}return d&&(d.syncedLyrics||d.plainLyrics)||""}
+function lyFetch(t){var ar=/desconocido/i.test(t.artist)?"":t.artist,al=/desconocido/i.test(t.album)?"":t.album,du=Math.round(t.dur||(au.duration>0&&isFinite(au.duration)?au.duration:0));
+  var nat=AN&&ar?fetch("https://tb.local/l?a="+enc(ar)+"&t="+enc(t.title)+"&b="+enc(al)+"&d="+du).then(chk).then(lyPick).catch(function(){return""}):Promise.resolve("");
+  return nat.then(function(x){if(x)return x;
+    return fetch("https://lrclib.net/api/search?track_name="+enc(t.title)+(ar?"&artist_name="+enc(ar):"")).then(chk).then(lyPick).catch(function(){return""})})}
+var _lyb=lyBuild;
+lyBuild=function(){_lyb();var t=queue[qi];if(!t||LY[t.k]||t.genre=="Podcast"||(LYF[t.k]&&Date.now()-LYF[t.k]<60000))return;LYF[t.k]=Date.now();
+  lyFetch(t).then(function(tx){if(!tx)return;LY[t.k]=tx;delete LP[t.k];delete LYF[t.k];saveLY();var c=queue[qi];if(c&&c.k==t.k){_lyb();lyTick(au.currentTime||0)}})};
+
 var NI={podcast:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',home:'<path class="f" d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/>',lib:'<path d="M5 4v16M10 4v16"/><path d="M15.2 5.4l4.3 14.2"/>',"new":'<path d="M12 5v14M5 12h14"/>'};
 $("nav").innerHTML=[["home","Home"],["search","Búsqueda"],["podcast","Podcast"],["lib","Biblioteca"]].map(function(x){return '<button data-t="'+x[0]+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+NI[x[0]]+'</svg>'+x[1]+'</button>'}).join("");
 $("nav").onclick=function(e){var b=e.target.closest("button");if(!b)return;tab=b.dataset.t;open=null;render();scrollTo(0,0)};
-window.goBack=function(){if($("ly").classList.contains("show")){$("ly").classList.remove("show");return true}if($("sheet").classList.contains("show")){closeSheet();return true}if($("np").classList.contains("show")){$("np").classList.remove("show");return true}if(open){open=null;render();return true}if(tab!="home"){tab="home";render();return true}return false};
+window.goBack=function(){if($("ly").classList.contains("show")){$("ly").classList.remove("show");return true}if($("sheet").classList.contains("show")){closeSheet();return true}if($("np").classList.contains("show")){$("np").classList.remove("show");return true}if(tab=="podcast"&&POD.cur){POD.cur=null;POD.ep=null;render();return true}if(open){open=null;render();return true}if(tab!="home"){tab="home";render();return true}return false};
 $("main").oninput=function(e){var i=e.target;
   if(i.id=="repo"){S.repo=i.value.trim();svS();return}
   if(i.id=="q"){q=i.value;var rr=$("res");if(rr){rr.innerHTML=res();obs()}return}
@@ -510,69 +581,7 @@ document.addEventListener("visibilitychange",function(){if(!document.hidden&&AN)
    music-search/catalog API; keep it explicit without calling incompatible routes. */
 var REVANCED_API_BASE = "https://api.revanced.app/v4";
 window.TuneBoxAPI = { revancedBase: REVANCED_API_BASE };
-/* Online catalog search + LRCLIB lyrics. */
-(function(){
-  var onlineBusy=false;
-  function onlineBox(){return $("online-results")}
-  function onlineMsg(s){var b=onlineBox();if(b)b.innerHTML='<div class="a" style="padding:10px 0">'+esc(s)+'</div>'}
-  function trackRow(title,artist,album,art,url,dur,kind,extra){
-    return '<div class="row"><div class="cv" style="background:'+bg(album||title)+'">'+(art?'<img src="'+esc(art)+'" alt="" onerror="this.remove()">':'♫')+'</div><div class="m" style="cursor:default"><div class="t">'+esc(title)+'</div><div class="a">'+esc(artist)+(album?' · '+esc(album):'')+'</div></div>'+(url?'<button class="ib" data-online-play="1" data-url="'+esc(url)+'" data-title="'+esc(title)+'" data-artist="'+esc(artist)+'" data-album="'+esc(album||"SoundBits Online")+'" data-art="'+esc(art||"")+'" data-dur="'+(dur||0)+'">▶</button>':'')+(extra||'')+'</div>'
-  }
-  async function searchOnline(kind){
-    var term=($("q")&&$("q").value||q||"").trim();
-    if(!term){onlineMsg("Escribe primero el nombre de una canción, artista o podcast en Buscar.");return}
-    onlineMsg("Buscando…");
-    try{
-      if(kind==="music"){
-        var r=await fetch("https://itunes.apple.com/search?term="+encodeURIComponent(term)+"&entity=song&limit=20");
-        if(!r.ok)throw Error("Servicio de música no disponible");
-        var d=await r.json();
-        if(!d.results.length){onlineMsg("No se encontraron canciones.");return}
-        onlineBox().innerHTML=d.results.map(function(x){return trackRow(x.trackName,x.artistName,x.collectionName,x.artworkUrl100,x.previewUrl,Math.round((x.trackTimeMillis||0)/1000),"music")}).join("");
-      }else{
-        var r=await fetch("https://itunes.apple.com/search?term="+encodeURIComponent(term)+"&entity=podcast&limit=15");
-        if(!r.ok)throw Error("Servicio de podcasts no disponible");
-        var d=await r.json();
-        if(!d.results.length){onlineMsg("No se encontraron podcasts.");return}
-        onlineBox().innerHTML=d.results.map(function(x){return trackRow(x.collectionName,x.artistName,"Podcast",x.artworkUrl100,"",0,"podcast",'<button data-podcast-feed="'+esc(x.feedUrl||"")+'" data-podcast-title="'+esc(x.collectionName)+'">Episodios</button>')}).join("");
-      }
-    }catch(e){onlineMsg("No se pudo conectar. Comprueba tu conexión e inténtalo otra vez. Algunos servicios pueden bloquear solicitudes desde ciertos WebView.")}
-  }
-  document.addEventListener("click",function(e){
-    var b=e.target.closest("[data-online]");
-    if(b){searchOnline(b.getAttribute("data-online"));return}
-    var p=e.target.closest("[data-online-play]");
-    if(p){
-      var src=p.getAttribute("data-url");if(!src){toast("Este resultado no ofrece una muestra reproducible.");return}
-      var t=mk({title:p.dataset.title,artist:p.dataset.artist,album:p.dataset.album,art:p.dataset.art,src:src,dur:+p.dataset.dur||30,genre:"Online",added:Date.now()});
-      play([t],0);toast("Reproduciendo muestra en línea");return
-    }
-    var f=e.target.closest("[data-podcast-feed]");
-    if(f){
-      var feed=f.getAttribute("data-podcast-feed");if(!feed){toast("Este podcast no publicó un feed RSS.");return}
-      onlineMsg("Cargando episodios…");
-      fetch(feed).then(function(r){if(!r.ok)throw Error();return r.text()}).then(function(tx){
-        var xml=new DOMParser().parseFromString(tx,"text/xml"),items=Array.from(xml.querySelectorAll("item")).slice(0,30);
-        if(!items.length){onlineMsg("No se encontraron episodios en el feed.");return}
-        onlineBox().innerHTML='<b style="display:block;margin:8px 0">Episodios · '+esc(f.dataset.podcastTitle)+'</b>'+items.map(function(it){
-          var title=it.querySelector("title")?.textContent||"Episodio",desc=it.querySelector("description")?.textContent||"",enc=it.querySelector("enclosure"),url=enc&&enc.getAttribute("url"),date=it.querySelector("pubDate")?.textContent||"";
-          return trackRow(title,date,"Episodio", "",url,0,"podcast",'<span class="a"> </span>')
-        }).join("")
-      }).catch(function(){onlineMsg("No se pudo leer el RSS desde esta aplicación. El servidor del podcast puede bloquear el acceso directo.")});
-    }
-  });
-  // When a song has no saved lyrics, try LRCLIB and keep the result for next time.
-  var originalLyBuild=window.lyBuild;
-  window.lyBuild=function(){
-    if(typeof originalLyBuild==="function")originalLyBuild();
-    var t=queue[qi];if(!t||LY[t.k]||t._lyFetch)return;
-    t._lyFetch=true;
-    fetch("https://lrclib.net/api/get?artist_name="+encodeURIComponent(t.artist)+"&track_name="+encodeURIComponent(t.title)+"&album_name="+encodeURIComponent(t.album)+"&duration="+Math.round(au.duration||t.dur||0))
-      .then(function(r){if(!r.ok)throw Error();return r.json()})
-      .then(function(d){var text=d.syncedLyrics||d.plainLyrics;if(!text||!queue[qi]||queue[qi].k!==t.k)return;LY[t.k]=text;saveLY();delete LP[t.k];if($("ly").classList.contains("show"))originalLyBuild()})
-      .catch(function(){t._lyFetch=false});
-  };
-})();
+
 
 </script>
 </body>
