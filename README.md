@@ -1,4 +1,4 @@
-# SoundBits 2.0
+# SoundBits v0.1.8
 
 Reproductor musical Android con biblioteca local y búsqueda integrada de un catálogo online de audio con licencias Creative Commons compatibles.
 
@@ -14,47 +14,11 @@ Reproductor musical Android con biblioteca local y búsqueda integrada de un cat
 ## Consideraciones del catálogo
 Internet Archive es un catálogo de archivo, no un sustituto del catálogo comercial de Spotify. La disponibilidad, calidad y metadatos dependen de cada elemento. Revisa la licencia del elemento antes de distribuir comercialmente la app o integrar monetización.
 
+## Novedades 1.9
+- Diseño estilo Spotify (verde, fondo oscuro, navegación Inicio / Buscar / Tu biblioteca / Podcasts, ajustes con el engranaje de arriba).
+- Guardar sin conexión: botón ⤓ en canciones (Internet Archive y podcasts) y «Guardar todo» en playlists. Pestaña «Descargas» en la biblioteca.
+- Caché temporal (Ajustes > Sin conexión): lo que escuchas en línea con Wi‑Fi se guarda N días y se borra solo; al reproducirlo de nuevo con Wi‑Fi se vuelve a descargar.
+- Podcasts: búsqueda (directorio de Apple) y feeds RSS, episodios con descarga sin conexión.
+- Fuentes en línea: Internet Archive, YouTube (API oficial + reproductor incrustado), Mixcloud y Audiomack (reproductores oficiales, sin descargas).
+- Se quitó la pantalla de inicio animada.
 
-## SoundBits 2.0 — evolución visual y eficiencia
-
-- Se conserva la arquitectura Android existente (Java + WebView + servicio multimedia).
-- Se incorpora una capa visual Liquid Glass moderada, con degradados translúcidos y bordes sutiles.
-- El modo ligero elimina los efectos de transparencia y sombras para dispositivos modestos.
-- El analizador visual ya no ejecuta un ciclo `requestAnimationFrame` permanente: solo se actualiza cuando el reproductor a pantalla completa está visible y la app está en primer plano.
-- Se incrementa `versionCode` a 10 y `versionName` a 2.0 para distinguir esta entrega de la 1.8.
-
-### Alcance de esta entrega
-
-Esta versión es una primera integración segura de diseño y optimización. No afirma incorporar todavía funciones no presentes en el código base, como reproducción gapless/crossfade real, audio espacial con seguimiento de cabeza, FLAC lossless garantizado, sincronización con cuentas externas, traducción IA o SponsorBlock. Estas requieren implementación y validación separadas.
-
-### Firma de Android
-
-Para actualizar una instalación existente, conserva de forma privada la misma clave de firma que usaste para publicar SoundBits 1.8. No compartas `tunebox.jks` ni sus contraseñas. Antes de distribuir, migra las credenciales de firma a secretos locales o de CI; no cambies la clave de firma si necesitas mantener la ruta de actualización.
-
-
-## SoundBits 2.1 — Audio, podcasts y descargas
-
-- Añadida búsqueda de programas en el catálogo de Apple Podcasts/iTunes.
-- Consulta de episodios desde el endpoint de episodios de iTunes cuando está disponible y lectura de RSS cuando el feed está expuesto por CORS.
-- Reproducción web de episodios y guardado de posición en almacenamiento local; el botón de descarga solicita guardar el archivo cuando el servidor lo permite.
-- Se conserva la apariencia visual existente; Podcasts se integra dentro de la pantalla Buscar.
-- LRCLIB ya está integrado para letras sincronizadas y búsqueda por artista/título.
-- El catálogo musical online continúa limitado a contenido con licencia identificada como compatible.
-
-### Límites y siguientes integraciones
-
-Spotify requiere OAuth/credenciales para endpoints que no sean públicos; no se simula una integración autenticada. SponsorBlock y Return YouTube Dislike solo tienen sentido para contenido de YouTube con identificadores de vídeo, y esta versión base no reproduce YouTube. No se afirma que esas integraciones estén activas. Las API de Voxtrona no se han podido identificar como endpoints públicos en el código fuente entregado; deben configurarse con sus rutas y autenticación oficiales antes de invocarlas.
-
-### SoundBits 2.1 — streaming y podcasts en segundo plano
-- La reproducción de episodios reutiliza el reproductor de audio principal, por lo que aprovecha la sesión multimedia/notificación y el servicio Android ya configurados.
-- Se guarda periódicamente la posición de los episodios en `localStorage` y se intenta restaurar al volver a reproducirlos.
-- El streaming online de música sigue usando el catálogo de Internet Archive filtrado por licencias compatibles y el proxy con soporte HTTP Range; no se presenta como acceso al catálogo comercial de Voxtrona.
-- El ZIP de Voxtrona proporcionado contiene un sitio web de presentación y enlaces de descarga, pero no se encontraron endpoints de streaming ni documentación de API en el código inspeccionado. Para integrar Voxtrona directamente hace falta su endpoint oficial de búsqueda/resolución de audio y el mecanismo de autorización, si lo requiere. No se debe inventar una API ni extraer streams de fuentes protegidas.
-
-
-## SoundBits 2.2 — importación por enlace y letras
-- Se añade importador de enlaces públicos RSS, M3U, JSON/CSV con URLs de audio y enlaces directos a archivos de audio.
-- Los enlaces de Spotify/YouTube se detectan y muestran el requisito de usar sus integraciones oficiales; no se simula acceso a audio protegido.
-- LRCLIB: si la consulta exacta no devuelve letra, se intenta la búsqueda avanzada y se priorizan coincidencias por título/artista y letras sincronizadas.
-- Se mejora el auto-seguimiento visual de líneas sincronizadas y el gesto horizontal del área de portada.
-- Límites: RSS/playlist remota puede fallar si el host bloquea CORS; playlists comerciales requieren OAuth/API y fuente de audio permitida. No se ha compilado ni probado en un dispositivo en esta sesión.
