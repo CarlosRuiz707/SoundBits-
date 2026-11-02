@@ -1,4 +1,7 @@
+import argparse
+import json
 import os
+import sys
 from flask import Flask, jsonify, request
 from ytmusicapi import YTMusic
 
@@ -291,6 +294,28 @@ def album(query):
         return jsonify({'error': f'Error buscando álbum: {exc}'}), 500
 
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 3000)), debug=False)
+def run_cli():
+    parser = argparse.ArgumentParser(description='Busca una canción y la añade a una playlist de YouTube Music.')
+    parser.add_argument('--query', '-q', help='Texto a buscar, por ejemplo: "Oasis Wonderwall"')
+    parser.add_argument('--title', default='Tunebox Playlist', help='Nombre de la playlist')
+    parser.add_argument('--description', default='Creada desde Tunebox', help='Descripción de la playlist')
+    parser.add_argument('--limit', type=int, default=1, help='Número de resultados a probar (1 por defecto)')
+    args = parser.parse_args()
 
+    if not args.query:
+        parser.print_help()
+        return 1
+
+    try:
+        result = create_playlist_from_query(args.title, args.description, args.query, args.limit)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+    except Exception as exc:
+        print(f'Error: {exc}', file=sys.stderr)
+        return 1
+
+
+if __name__ == '__main__':
+    if any(arg in sys.argv[1:] for arg in ('--query', '-q')):
+        raise SystemExit(run_cli())
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 3000)), debug=False)
