@@ -11,7 +11,9 @@ if (googleServicesFile.exists()) {
     def firebaseConfig = new groovy.json.JsonSlurper().parse(googleServicesFile)
     firebaseProjectId = firebaseConfig.project_info?.project_id
 }
-if (googleServicesFile.exists() && firebaseProjectId && !firebaseProjectId.contains('placeholder')) {
+
+def firebaseConfigured = googleServicesFile.exists() && firebaseProjectId && !firebaseProjectId.contains('placeholder')
+if (firebaseConfigured) {
     apply plugin: 'com.google.gms.google-services'
 }
 
@@ -57,11 +59,15 @@ android {
 
 
 dependencies {
-    // Google Sign-In nativo mediante Credential Manager + Firebase Authentication.
+    // AndroidX base dependency used by the app.
     implementation 'androidx.annotation:annotation:1.9.1'
-    implementation 'androidx.credentials:credentials:1.5.0'
-    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
-    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
-    implementation platform('com.google.firebase:firebase-bom:33.7.0')
-    implementation 'com.google.firebase:firebase-auth'
+
+    // Google Sign-In y Firebase solo cuando exista una configuración real del proyecto.
+    if (firebaseConfigured) {
+        implementation 'androidx.credentials:credentials:1.5.0'
+        implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
+        implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+        implementation platform('com.google.firebase:firebase-bom:33.7.0')
+        implementation 'com.google.firebase:firebase-auth'
+    }
 }
