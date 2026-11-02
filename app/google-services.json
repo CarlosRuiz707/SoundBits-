@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "000000000000",
+    "project_id": "tunebox-placeholder",
+    "storage_bucket": "tunebox-placeholder.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:000000000000:android:000000000000000000000000",
+        "android_client_info": {
+          "package_name": "app.tunebox"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "000000000000-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.apps.googleusercontent.com",
+          "client_type": 1
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-placeholder-key-for-build-only"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        },
+        "analytics_service": {
+          "status": 0
+        },
+        "cloud_messaging_service": {
+          "status": 0
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
