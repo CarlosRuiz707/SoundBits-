@@ -1,4 +1,13 @@
-plugins { id 'com.android.application' }
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services' apply false
+}
+
+// Google Services solo se aplica cuando el proyecto ya tiene su configuración Firebase.
+// Sin google-services.json, la app sigue compilando y la función de cuenta queda desactivada.
+if (file('google-services.json').exists()) {
+    apply plugin: 'com.google.gms.google-services'
+}
 
 // Coloca automaticamente los archivos sueltos de la raiz del repositorio (res_*.xml y *.java)
 // en las carpetas que Android espera. Funciona con el flujo de GitHub antiguo y con el nuevo.
@@ -38,4 +47,15 @@ android {
     }
     buildTypes { release { minifyEnabled false } }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
+
+
+dependencies {
+    // Google Sign-In nativo mediante Credential Manager + Firebase Authentication.
+    implementation 'androidx.annotation:annotation:1.9.1'
+    implementation 'androidx.credentials:credentials:1.5.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-auth'
 }
