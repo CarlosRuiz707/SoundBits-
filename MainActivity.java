@@ -252,93 +252,6 @@ public class MainActivity extends Activity {
     try (InputStream in = hc.getInputStream()) { byte[] bf = new byte[8192]; int n; while ((n = in.read(bf)) > 0) bo.write(bf, 0, n); }
     return bo.toString("UTF-8");
   }
-  String archiveCreator(JSONObject o) {
-    Object v = o.opt("creator");
-    if (v instanceof JSONArray) {
-      JSONArray a = (JSONArray) v; ArrayList<String> out = new ArrayList<>();
-      for (int i = 0; i < a.length() && i < 3; i++) { String x = a.optString(i, "").trim(); if (!x.isEmpty()) out.add(x); }
-      return android.text.TextUtils.join(", ", out);
-    }
-    return v == null || v == JSONObject.NULL ? "Artista desconocido" : String.valueOf(v).trim();
-  }
-  boolean allowedArchiveLicense(String license) {
-    String x = license == null ? "" : license.toLowerCase(Locale.ROOT);
-    return x.contains("creativecommons.org/licenses/by/") || x.contains("creativecommons.org/licenses/by-sa/")
-      || x.contains("creativecommons.org/publicdomain/zero/") || x.contains("creativecommons.org/publicdomain/mark/");
-  }
-  String archiveAudioFile(JSONArray files) {
-    String best = ""; int bestScore = -1;
-    for (int i = 0; i < files.length(); i++) {
-      JSONObject file = files.optJSONObject(i); if (file == null || file.optBoolean("private", false)) continue;
-      String name = file.optString("name", ""); String low = name.toLowerCase(Locale.ROOT);
-      if (!(low.endsWith(".mp3") || low.endsWith(".m4a") || low.endsWith(".ogg") || low.endsWith(".opus") || low.endsWith(".flac") || low.endsWith(".wav"))) continue;
-      if (low.contains("_spectrogram") || low.contains("_thumb") || low.endsWith("_sample.mp3")) continue;
-      long size = 0; try { size = Long.parseLong(file.optString("size", "0")); } catch (Exception e) {}
-      if (size <= 0) continue;
-      int score = low.endsWith(".mp3") ? 6 : low.endsWith(".m4a") ? 5 : low.endsWith(".ogg") ? 4 : low.endsWith(".opus") ? 3 : low.endsWith(".flac") ? 2 : 1;
-      if (score > bestScore) { bestScore = score; best = name; }
-    }
-    return best;
-  }
-  JSONArray searchArchive(String query) {
-    JSONArray out = new JSONArray();
-    try {
-      String clean = query == null ? "" : query.replaceAll("[^\\p{L}\\p{N} ]", " ").trim().replaceAll("\\s+", " ");
-      if (clean.length() < 2) return out;
-      String term = "\"" + clean + "\"";
-      String q = "mediatype:audio AND licenseurl:http*creativecommons.org* AND (title:" + term + " OR creator:" + term + " OR subject:" + term + ")";
-      String url = "https://archive.org/advancedsearch.php?q=" + enc(q)
-        + "&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=year&fl[]=licenseurl&rows=12&page=1&output=json";
-      JSONObject root = new JSONObject(httpGet(url));
-      JSONArray docs = root.optJSONObject("response") == null ? new JSONArray() : root.getJSONObject("response").optJSONArray("docs");
-      if (docs == null) return out;
-      for (int i = 0; i < docs.length() && i < 12; i++) {
-        JSONObject doc = docs.optJSONObject(i); if (doc == null) continue;
-        String id = doc.optString("identifier", ""), license = doc.optString("licenseurl", "");
-        if (id.isEmpty() || !allowedArchiveLicense(license)) continue;
-        try {
-          JSONObject detail = new JSONObject(httpGet("https://archive.org/metadata/" + Uri.encode(id)));
-          JSONObject md = detail.optJSONObject("metadata"); JSONArray files = detail.optJSONArray("files");
-          if (md == null || files == null) continue;
-          String itemLicense = md.optString("licenseurl", license);
-          if (!allowedArchiveLicense(itemLicense)) continue;
-          String file = archiveAudioFile(files); if (file.isEmpty()) continue;
-          String title = md.optString("title", doc.optString("title", "Sin título"));
-          String artist = archiveCreator(md); if (artist.isEmpty()) artist = archiveCreator(doc);
-          JSONObject track = new JSONObject();
-          track.put("id", id); track.put("title", title); track.put("artist", artist);
-          track.put("album", md.optString("album", ""));
-          track.put("license", itemLicense);
-          track.put("sourceUrl", "https://archive.org/details/" + Uri.encode(id));
-          track.put("url", "https://archive.org/download/" + Uri.encode(id) + "/" + Uri.encode(file));
-          track.put("art", "https://archive.org/services/img/" + Uri.encode(id));
-          track.put("dur", md.optDouble("runtime", 0));
-          out.put(track);
-        } catch (Exception ignored) {}
-      }
-    } catch (Exception ignored) {}
-    return out;
-  }
-  WebResourceResponse streamArchive(WebResourceRequest request, Map<String, String> headers) throws IOException {
-    String raw = request.getUrl().getQueryParameter("u");
-    if (raw == null) return err(headers, 404);
-    Uri target = Uri.parse(raw); String host = target.getHost();
-    if (!"https".equals(target.getScheme()) || host == null || !(host.equals("archive.org") || host.endsWith(".archive.org"))) return err(headers, 404);
-    HttpURLConnection hc = (HttpURLConnection) new URL(raw).openConnection();
-    hc.setConnectTimeout(12000); hc.setReadTimeout(20000); hc.setInstanceFollowRedirects(true);
-    hc.setRequestProperty("User-Agent", UA);
-    String range = request.getRequestHeaders().get("Range"); if (range != null) hc.setRequestProperty("Range", range);
-    int code = hc.getResponseCode();
-    if (code != 200 && code != 206) { InputStream es = hc.getErrorStream(); if (es != null) es.close(); return err(headers, code == 416 ? 404 : 503); }
-    String type = hc.getContentType(); if (type == null) type = "audio/mpeg";
-    String length = hc.getHeaderField("Content-Length"), contentRange = hc.getHeaderField("Content-Range");
-    headers.put("Accept-Ranges", "bytes"); headers.put("Cache-Control", "no-store");
-    if (length != null) headers.put("Content-Length", length);
-    if (contentRange != null) headers.put("Content-Range", contentRange);
-    InputStream upstream = hc.getInputStream();
-    InputStream body = new FilterInputStream(upstream) { public void close() throws IOException { try { super.close(); } finally { hc.disconnect(); } } };
-    return new WebResourceResponse(type, null, code, code == 206 ? "Partial Content" : "OK", headers, body);
-  }
   String f(JSONObject o, String k) { return o.isNull(k) ? "" : o.optString(k, "").trim(); }
   boolean hasLy(JSONObject o) { return f(o, "syncedLyrics").length() > 0 || f(o, "plainLyrics").length() > 0; }
   /* Lyrics from LRCLIB (needs internet; nothing is stored on the device) */
@@ -376,7 +289,6 @@ public class MainActivity extends Activity {
     return bo.toString("UTF-8");
   }
   String enc2(String s) throws UnsupportedEncodingException { return URLEncoder.encode(s == null ? "" : s, "UTF-8"); }
-  String pct(String s) throws UnsupportedEncodingException { return URLEncoder.encode(s == null ? "" : s, "UTF-8").replace("+", "%20").replace("*", "%2A").replace("%7E", "~"); }
   String httpGet2(String url) throws IOException {
     HttpURLConnection hc = (HttpURLConnection) new URL(url).openConnection();
     hc.setConnectTimeout(8000); hc.setReadTimeout(12000);
@@ -490,9 +402,9 @@ public class MainActivity extends Activity {
   WebResourceResponse jsonResp(Map<String, String> hd, String body) throws IOException {
     return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(body.getBytes("UTF-8")));
   }
-  /* Official embedded players only (YouTube, Mixcloud, Audiomack). Ads and controls stay untouched. */
+  /* Official embedded players only (YouTube, Mixcloud). Ads and controls stay untouched. */
   WebResourceResponse embedPage(String url, Map<String, String> hd) throws IOException {
-    String[] ok = {"https://www.youtube-nocookie.com/embed/", "https://www.youtube.com/embed/", "https://www.mixcloud.com/widget/iframe/", "https://audiomack.com/embed/"};
+    String[] ok = {"https://www.youtube-nocookie.com/embed/", "https://www.youtube.com/embed/", "https://www.mixcloud.com/widget/iframe/"};
     boolean good = false;
     if (url != null) for (String p : ok) if (url.startsWith(p)) good = true;
     if (!good) return err(hd, 404);
@@ -557,31 +469,6 @@ public class MainActivity extends Activity {
     out.put("title", showTitle); out.put("author", author); out.put("art", showArt); out.put("eps", eps);
     return out;
   }
-  /* Audiomack Data API: OAuth 1.0a (two-legged) signed with the consumer key/secret the user provides */
-  String audiomackSearch(String q, String ck, String cs) throws Exception {
-    String base = "https://api.audiomack.com/v1/search";
-    String nonce = Long.toHexString(new java.security.SecureRandom().nextLong()) + Long.toHexString(System.nanoTime());
-    String ts = String.valueOf(System.currentTimeMillis() / 1000);
-    TreeMap<String, String> ps = new TreeMap<>();
-    ps.put("q", q); ps.put("oauth_consumer_key", ck); ps.put("oauth_nonce", nonce);
-    ps.put("oauth_signature_method", "HMAC-SHA1"); ps.put("oauth_timestamp", ts); ps.put("oauth_version", "1.0");
-    StringBuilder nm = new StringBuilder();
-    for (Map.Entry<String, String> e : ps.entrySet()) { if (nm.length() > 0) nm.append('&'); nm.append(pct(e.getKey())).append('=').append(pct(e.getValue())); }
-    String baseStr = "GET&" + pct(base) + "&" + pct(nm.toString());
-    javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA1");
-    mac.init(new javax.crypto.spec.SecretKeySpec((pct(cs) + "&").getBytes("UTF-8"), "HmacSHA1"));
-    String sig = android.util.Base64.encodeToString(mac.doFinal(baseStr.getBytes("UTF-8")), android.util.Base64.NO_WRAP);
-    String auth = "OAuth oauth_consumer_key=\"" + pct(ck) + "\", oauth_nonce=\"" + nonce + "\", oauth_signature=\"" + pct(sig) + "\", oauth_signature_method=\"HMAC-SHA1\", oauth_timestamp=\"" + ts + "\", oauth_version=\"1.0\"";
-    HttpURLConnection hc = (HttpURLConnection) new URL(base + "?q=" + pct(q)).openConnection();
-    hc.setConnectTimeout(8000); hc.setReadTimeout(12000);
-    hc.setRequestProperty("User-Agent", UA2); hc.setRequestProperty("Authorization", auth);
-    try {
-      int code = hc.getResponseCode();
-      if (code >= 400) throw new IOException("audiomack " + code);
-      try (InputStream in = hc.getInputStream()) { return readAll(in); }
-    } finally { hc.disconnect(); }
-  }
-
   WebResourceResponse err(Map<String, String> hd, int code) {
     return new WebResourceResponse("application/json", "utf-8", code, code == 503 ? "Blocked" : "Not Found", hd, new ByteArrayInputStream("{}".getBytes()));
   }
@@ -600,22 +487,6 @@ public class MainActivity extends Activity {
         if (o == null) return err(hd, 404);
         return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(o.toString().getBytes("UTF-8")));
       }
-      if (path.equals("/stream")) {
-        JSONArray results = searchArchive(u.getQueryParameter("q"));
-        hd.put("Cache-Control", "no-store");
-        return new WebResourceResponse("application/json", "utf-8", 200, "OK", hd, new ByteArrayInputStream(results.toString().getBytes("UTF-8")));
-      }
-      if (path.equals("/streamfile")) return streamArchive(r, hd);
-      if (path.equals("/jm")) {
-        String cid = u.getQueryParameter("client_id");
-        if (cid == null || cid.trim().isEmpty()) return err(hd, 401);
-        StringBuilder jb = new StringBuilder("https://api.jamendo.com/v3.0/tracks/?format=json&limit=20&audioformat=mp32&include=musicinfo&client_id=").append(enc2(cid.trim()));
-        for (String jk : new String[]{"search", "order", "tags"}) {
-          String jv = u.getQueryParameter(jk);
-          if (jv != null && !jv.isEmpty()) jb.append('&').append(jk).append('=').append(enc2(jv));
-        }
-        return jsonResp(hd, httpGet2(jb.toString()));
-      }
       if (path.equals("/pf")) return proxyMedia(r, hd);
       if (path.startsWith("/o/")) {
         String oid = u.getLastPathSegment();
@@ -630,11 +501,6 @@ public class MainActivity extends Activity {
         String fu = u.getQueryParameter("u");
         if (fu == null) return err(hd, 404);
         return jsonResp(hd, parseFeed(fu.replaceFirst("^http://", "https://")).toString());
-      }
-      if (path.equals("/am")) {
-        String ak = u.getQueryParameter("k"), as = u.getQueryParameter("s"), aq = u.getQueryParameter("q");
-        if (ak == null || as == null || ak.isEmpty() || as.isEmpty()) return err(hd, 401);
-        return jsonResp(hd, audiomackSearch(aq == null ? "" : aq, ak, as));
       }
       if (path.equals("/s")) {
         String yurl = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoSyndicated=true&videoCategoryId=10&maxResults=15&q="
@@ -727,15 +593,7 @@ public class MainActivity extends Activity {
     try {
       if (url != null && url.length() > 0) {
         File f = imgFile(url);
-        if (!f.exists() && url.startsWith("https://archive.org/services/img/")) {
-          HttpURLConnection hc = (HttpURLConnection) new URL(url).openConnection();
-          hc.setConnectTimeout(7000); hc.setReadTimeout(9000); hc.setRequestProperty("User-Agent", UA);
-          File tmp = new File(f.getPath() + ".tmp");
-          try (InputStream in = hc.getInputStream(); FileOutputStream out = new FileOutputStream(tmp)) {
-            byte[] bf = new byte[8192]; int n; while ((n = in.read(bf)) > 0) out.write(bf, 0, n);
-          } finally { hc.disconnect(); }
-          tmp.renameTo(f);
-        }
+
         if (f.exists()) return small(null, f.getPath());
       }
       if (mid > 0) {

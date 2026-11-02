@@ -18,8 +18,6 @@ Sin ese archivo de configuración, la aplicación compila sin activar el proveed
 Android Java + WebView + Firebase Authentication + Android Credential Manager.
 
 ## Novedades 2.0
-- Música de internet completa con Jamendo (client_id gratuito de https://devportal.jamendo.com/): inicio con populares y géneros, búsqueda y descargas sin conexión cuando el artista lo permite. Puedes fijar tu client_id en `JM_DEFAULT_ID` dentro de `index.html`.
-- Más fuentes: Internet Archive, YouTube (API oficial + reproductor incrustado), Mixcloud y Audiomack (reproductores oficiales), podcasts.
 - Se quitó lo que Spotify no tiene: importar CSV/JSON/letras, identificar carátulas, canvas, apariencia y rendimiento, secciones del inicio, entrada manual de feeds RSS.
 - Se eliminó el backend de ytmusicapi (no estaba conectado a la app y usa una API privada de YouTube Music).
 
