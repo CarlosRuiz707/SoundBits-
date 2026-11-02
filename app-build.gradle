@@ -3,9 +3,15 @@ plugins {
     id 'com.google.gms.google-services' apply false
 }
 
-// Google Services solo se aplica cuando el proyecto ya tiene su configuración Firebase.
-// Sin google-services.json, la app sigue compilando y la función de cuenta queda desactivada.
-if (file('google-services.json').exists()) {
+// El JSON de ejemplo del repositorio contiene valores ficticios y no debe
+// usarse para activar Firebase. Solo se aplica cuando hay un proyecto real.
+def googleServicesFile = file('google-services.json')
+def firebaseProjectId = null
+if (googleServicesFile.exists()) {
+    def firebaseConfig = new groovy.json.JsonSlurper().parse(googleServicesFile)
+    firebaseProjectId = firebaseConfig.project_info?.project_id
+}
+if (googleServicesFile.exists() && firebaseProjectId && !firebaseProjectId.contains('placeholder')) {
     apply plugin: 'com.google.gms.google-services'
 }
 
