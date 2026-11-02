@@ -46,6 +46,9 @@ import org.xmlpull.v1.XmlPullParser;
 
 public class MainActivity extends Activity {
   static MainActivity inst;
+  /* Solo estos comandos pueden llegar por intent (evita inyectar JS desde otras apps) */
+  static final Set<String> CMDS = new HashSet<String>(Arrays.asList("play", "pause", "next", "prev", "toggle"));
+  static String okCmd(String c) { return c != null && CMDS.contains(c) ? c : null; }
   String pendingCmd;
   WebView w;
   ValueCallback<Uri[]> cb;
@@ -93,7 +96,7 @@ public class MainActivity extends Activity {
         return true;
       }
     });
-    pendingCmd = getIntent() != null ? getIntent().getStringExtra("cmd") : null;
+    pendingCmd = getIntent() != null ? okCmd(getIntent().getStringExtra("cmd")) : null;
     w.loadUrl("file:///android_asset/index.html");
     ArrayList<String> ps = new ArrayList<>();
     if (Build.VERSION.SDK_INT >= 33) { ps.add("android.permission.READ_MEDIA_AUDIO"); ps.add("android.permission.POST_NOTIFICATIONS"); }
@@ -226,7 +229,7 @@ public class MainActivity extends Activity {
   }
   protected void onNewIntent(Intent i) {
     super.onNewIntent(i); setIntent(i);
-    String c = i.getStringExtra("cmd");
+    String c = okCmd(i.getStringExtra("cmd"));
     if (c != null) js("window.tbCmd&&tbCmd('" + c + "')");
   }
 
@@ -613,6 +616,13 @@ public class MainActivity extends Activity {
   }
 
   class Br {
+    @JavascriptInterface public void openYouTube(final String q) {
+      runOnUiThread(new Runnable() { public void run() {
+        Intent i = new Intent(MainActivity.this, YouTubeActivity.class);
+        if (q != null && !q.trim().isEmpty()) i.putExtra("q", q.trim());
+        startActivity(i);
+      } });
+    }
     @JavascriptInterface public String getAuthState() { return authStateJson().toString(); }
     @JavascriptInterface public void signInGoogle() { runOnUiThread(new Runnable() { public void run() { startGoogleSignIn(); } }); }
     @JavascriptInterface public void signOutGoogle() { runOnUiThread(new Runnable() { public void run() { MainActivity.this.signOutGoogle(); } }); }
