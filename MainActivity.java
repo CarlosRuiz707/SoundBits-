@@ -451,6 +451,7 @@ public class MainActivity extends Activity {
               else if (tag.equals("itunes:duration")) cur.put("d", parseDur(tx));
               else if (tag.equals("pubDate")) cur.put("p", tx);
               else if (tag.equals("link") && !cur.has("l")) cur.put("l", tx);
+              else if ((tag.equals("description") || tag.equals("itunes:summary")) && !cur.has("s")) cur.put("s", tx.length() > 400 ? tx.substring(0, 400) : tx);
             } else if (!inItem) {
               if (tag.equals("title") && showTitle.isEmpty() && !inImage) showTitle = tx;
               else if (tag.equals("url") && inImage && showArt.isEmpty()) showArt = tx;
