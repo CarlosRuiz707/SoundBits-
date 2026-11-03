@@ -724,6 +724,53 @@ setInterval(function(){
     hd.put("Cache-Control", "no-store");
     return new WebResourceResponse("text/html", "utf-8", 200, "OK", hd, new ByteArrayInputStream(html.getBytes("UTF-8")));
   }
+  /* SponsorBlock (compartido por el reproductor integrado y la pestaña YouTube web):
+     devuelve los segmentos a omitir según las categorías activas. Bloquea: llamar fuera del hilo principal. */
+  static JSONArray sbQuery(String videoId) {
+    JSONArray valid = new JSONArray();
+    if (videoId == null || !videoId.matches("[A-Za-z0-9_-]{11}")) return valid;
+    Set<String> allowed = new LinkedHashSet<String>();
+    String cfg = sbCats;
+    if (cfg != null) for (String c : cfg.split(",")) if (SB_ALL.contains(c)) allowed.add(c);
+    if (allowed.isEmpty()) return valid;
+    HttpURLConnection c = null;
+    try {
+      Uri u = Uri.parse("https://sponsor.ajay.app/api/skipSegments").buildUpon()
+          .appendQueryParameter("videoID", videoId)
+          .appendQueryParameter("categories", new JSONArray(allowed).toString())
+          .appendQueryParameter("actionTypes", "[\"skip\"]")
+          .build();
+      c = (HttpURLConnection) new URL(u.toString()).openConnection();
+      c.setRequestMethod("GET");
+      c.setConnectTimeout(7000);
+      c.setReadTimeout(7000);
+      c.setRequestProperty("Accept", "application/json");
+      if (c.getResponseCode() == 200) {
+        StringBuilder body = new StringBuilder();
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"))) {
+          String line;
+          while ((line = r.readLine()) != null && body.length() < 500000) body.append(line);
+        }
+        JSONArray raw = new JSONArray(body.toString());
+        for (int i = 0; i < raw.length(); i++) {
+          JSONObject item = raw.optJSONObject(i);
+          String cat = item == null ? "" : item.optString("category");
+          String at = item == null ? "" : item.optString("actionType", "skip");
+          if (item == null || !allowed.contains(cat) || !"skip".equals(at)) continue;
+          JSONArray times = item.optJSONArray("segment");
+          if (times == null || times.length() < 2) continue;
+          double start = times.optDouble(0, -1), end = times.optDouble(1, -1);
+          if (Double.isFinite(start) && Double.isFinite(end) && start >= 0 && end > start) {
+            JSONObject seg = new JSONObject();
+            seg.put("start", start); seg.put("end", end); seg.put("category", cat);
+            valid.put(seg);
+          }
+        }
+      }
+    } catch (Exception ignored) {
+    } finally { if (c != null) c.disconnect(); }
+    return valid;
+  }
   /* Único puente de la vista de YouTube: solo reenvía eventos del reproductor a la página principal */
   class Yb {
     @JavascriptInterface public void ev(String s) {
@@ -734,51 +781,9 @@ setInterval(function(){
     /* SponsorBlock: consulta segmentos de patrocinio fuera del hilo principal. */
     @JavascriptInterface public void segments(final String videoId) {
       if (videoId == null || !videoId.matches("[A-Za-z0-9_-]{11}")) return;
-      final Set<String> allowed = new LinkedHashSet<String>();
-      String cfg = sbCats;
-      if (cfg != null) for (String c : cfg.split(",")) if (SB_ALL.contains(c)) allowed.add(c);
-      if (allowed.isEmpty()) return;
-      final String catsJson = new JSONArray(allowed).toString();
       new Thread(new Runnable() {
         public void run() {
-          HttpURLConnection c = null;
-          JSONArray valid = new JSONArray();
-          try {
-            Uri u = Uri.parse("https://sponsor.ajay.app/api/skipSegments").buildUpon()
-                .appendQueryParameter("videoID", videoId)
-                .appendQueryParameter("categories", catsJson)
-                .appendQueryParameter("actionTypes", "[\"skip\"]")
-                .build();
-            c = (HttpURLConnection) new URL(u.toString()).openConnection();
-            c.setRequestMethod("GET");
-            c.setConnectTimeout(7000);
-            c.setReadTimeout(7000);
-            c.setRequestProperty("Accept", "application/json");
-            if (c.getResponseCode() == 200) {
-              StringBuilder body = new StringBuilder();
-              try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"))) {
-                String line;
-                while ((line = r.readLine()) != null && body.length() < 500000) body.append(line);
-              }
-              JSONArray raw = new JSONArray(body.toString());
-              for (int i = 0; i < raw.length(); i++) {
-                JSONObject item = raw.optJSONObject(i);
-                String cat = item == null ? "" : item.optString("category");
-                String at = item == null ? "" : item.optString("actionType", "skip");
-                if (item == null || !allowed.contains(cat) || !"skip".equals(at)) continue;
-                JSONArray times = item.optJSONArray("segment");
-                if (times == null || times.length() < 2) continue;
-                double start = times.optDouble(0, -1), end = times.optDouble(1, -1);
-                if (Double.isFinite(start) && Double.isFinite(end) && start >= 0 && end > start) {
-                  JSONObject seg = new JSONObject();
-                  seg.put("start", start); seg.put("end", end); seg.put("category", cat);
-                  valid.put(seg);
-                }
-              }
-            }
-          } catch (Exception ignored) {
-          } finally { if (c != null) c.disconnect(); }
-          final String data = valid.toString();
+          final String data = sbQuery(videoId).toString();
           runOnUiThread(new Runnable() {
             public void run() {
               if (yw != null && ywReady) {
@@ -799,6 +804,15 @@ setInterval(function(){
         lp.leftMargin = Math.max(x, 0); lp.topMargin = Math.max(y, 0);
         yw.setLayoutParams(lp);
         yw.setVisibility(View.VISIBLE);
+      } });
+    }
+    /* Pestaña «YouTube»: abre YouTube web (con SponsorBlock) dentro de la app; q opcional = búsqueda */
+    @JavascriptInterface public void openYouTube(final String q) {
+      final String qq = q == null ? "" : (q.length() > 200 ? q.substring(0, 200) : q);
+      runOnUiThread(new Runnable() { public void run() {
+        Intent i = new Intent(MainActivity.this, YouTubeActivity.class);
+        if (!qq.trim().isEmpty()) i.putExtra("q", qq);
+        startActivity(i);
       } });
     }
     @JavascriptInterface public void ytHide() {

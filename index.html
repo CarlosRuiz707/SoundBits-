@@ -363,7 +363,7 @@ function podFeed(u){if(AN)return fetch("https://tb.local/pod?u="+enc(u)).then(ch
     return{title:g(x,"channel > title"),author:"",art:"",eps:Array.from(x.querySelectorAll("item")).slice(0,60).map(function(it){var en=it.querySelector("enclosure");return{t:g(it,"title"),u:en&&en.getAttribute("url"),p:g(it,"pubDate"),d:0}}).filter(function(e){return e.u})}})}
 function greet(){var h=new Date().getHours();return h<6?"Buenas noches":h<13?"Buenos días":h<20?"Buenas tardes":"Buenas noches"}
 function sugChips(){return '<div class="chips pchips">'+SUG.map(function(s){return '<button data-psug="'+s+'">'+s+'</button>'}).join("")+'</div>'}
-function searchView(){return '<div class="th">'+avBtn()+'<h1>Buscar</h1></div><input type="text" id="q" placeholder="¿Qué quieres escuchar?" enterkeyhint="search" value="'+esc(q)+'" autocomplete="off"><div id="res">'+res()+'</div><div id="yt-results">'+ytHtml()+'</div><div id="online-results">'+(ONL.term&&ONL.term==q.trim()?ONL.html:"")+'</div>'}
+function searchView(){return '<div class="th">'+avBtn()+'<h1>Buscar</h1></div><input type="text" id="q" placeholder="¿Qué quieres escuchar?" enterkeyhint="search" value="'+esc(q)+'" autocomplete="off"><div id="res">'+res()+'</div>'+rowL("Buscar en YouTube web",'data-yt="1"')+'<div id="yt-results">'+ytHtml()+'</div><div id="online-results">'+(ONL.term&&ONL.term==q.trim()?ONL.html:"")+'</div>'}
 function rowCv(t,art){return '<div class="cv" style="background:'+bg(t)+'">'+(art?'<img src="'+esc(art)+'" alt="" onerror="this.remove()">':'♫')+'</div>'}
 function podRes(){return POD.term.trim().length>1?POD.html:'<h3 style="margin-top:18px">Explora por tema</h3>'+sugChips()}
 function podRun(term){term=term.trim();var b=$("pres");if(!b)return;if(term.length<2){POD.html="";b.innerHTML=podRes();return}
@@ -525,9 +525,11 @@ var _lyb=lyBuild;
 lyBuild=function(){_lyb();var t=queue[qi];if(!t||LY[t.k]||t.genre=="Podcast"||(LYF[t.k]&&Date.now()-LYF[t.k]<60000))return;LYF[t.k]=Date.now();
   lyFetch(t).then(function(tx){if(!tx)return;LY[t.k]=tx;delete LP[t.k];delete LYF[t.k];saveLY();var c=queue[qi];if(c&&c.k==t.k){_lyb();lyTick(CT()||0)}})};
 
-var NI={podcast:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',home:'<path class="f" d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/>',lib:'<path d="M5 4v16M10 4v16"/><path d="M15.2 5.4l4.3 14.2"/>',"new":'<path d="M12 5v14M5 12h14"/>'};
-$("nav").innerHTML=[["home","Inicio"],["search","Búsqueda"],["podcast","Podcast"],["lib","Biblioteca"]].map(function(x){return '<button data-t="'+x[0]+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+NI[x[0]]+'</svg>'+x[1]+'</button>'}).join("");
-$("nav").onclick=function(e){var b=e.target.closest("button");if(!b)return;tab=b.dataset.t;open=null;render();scrollTo(0,0)};
+var NI={podcast:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',home:'<path class="f" d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/>',search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/>',lib:'<path d="M5 4v16M10 4v16"/><path d="M15.2 5.4l4.3 14.2"/>',"new":'<path d="M12 5v14M5 12h14"/>',youtube:'<rect x="3" y="6" width="18" height="12" rx="3.5"/><path d="M10.5 9.5v5l4.2-2.5z"/>'};
+/* Pestaña YouTube: abre YouTube web (con SponsorBlock) dentro de la app; con texto, abre la búsqueda */
+function openYT(s){s=(s||"").trim();if(AN){try{Android.openYouTube(s)}catch(e){toast("Actualiza la app para usar la pestaña YouTube")}}else window.open("https://m.youtube.com/"+(s?"results?search_query="+enc(s):""))}
+$("nav").innerHTML=[["home","Inicio"],["search","Búsqueda"],["youtube","YouTube"],["podcast","Podcast"],["lib","Biblioteca"]].map(function(x){return '<button data-t="'+x[0]+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+NI[x[0]]+'</svg>'+x[1]+'</button>'}).join("");
+$("nav").onclick=function(e){var b=e.target.closest("button");if(!b)return;if(b.dataset.t=="youtube"){openYT("");return}tab=b.dataset.t;open=null;render();scrollTo(0,0)};
 window.goBack=function(){if($("ly").classList.contains("show")){$("ly").classList.remove("show");return true}if($("sheet").classList.contains("show")){closeSheet();return true}if($("np").classList.contains("show")){$("np").classList.remove("show");return true}if(tab=="podcast"&&POD.cur){POD.cur=null;POD.ep=null;render();return true}if(open){open=null;render();return true}if(tab!="home"){tab="home";render();return true}return false};
 $("main").oninput=function(e){var i=e.target;
   if(i.id=="repo"){S.repo=i.value.trim();svS();return}
@@ -543,6 +545,7 @@ $("main").onclick=function(e){var t=e.target,g;
   if(g=t.closest("[data-go]")){tab=g.dataset.go=="podcast"?"podcast":"search";open=null;render();return}
   if(t.closest("[data-sort]")){S.sort=S.sort=="az"?"added":"az";svS();render();return}
   if(t.closest("[data-upd]")){checkUpdate();return}
+  if(t.closest("[data-yt]")){openYT(q);return}
   if(g=t.closest("[data-lchip]")){libChip=g.dataset.lchip;render();return}
   if(t.closest("[data-lgrid]")){S.libGrid=!S.libGrid;svS();render();return}
   if(g=t.closest("[data-set]")){var kv=g.dataset.set.split(":");S[kv[0]]=kv[1];applyS();svS();setCI();render();return}
@@ -810,7 +813,7 @@ function tick(){if(Date.now()-npT>10000){npT=Date.now();if(queue[qi]&&!PA())npSa
 function pushNow(){if(!AN)return;devRefresh();var t=queue[qi];if(!t)return;try{var ra=(AC[t.k]&&AC[t.k].a)||"";Android.now(t.title,t.artist,t.album,!PA(),t.mid||0,ra,Math.round((DU()||t.dur||0)*1000),Math.round((CT()||0)*1000))}catch(e){}}
 window.tbCmd=function(c){if(c=="toggle")toggle();else if(c=="play"){if(PA())toggle()}else if(c=="pause"){if(!PA())toggle()}else if(c=="next")next();else if(c=="prev")prev()};
 window.tbSeek=function(x){if(queue[qi])SK(x)};
-var LY={},LP={},lyCur=-1,lyK=null,npK=null,CTX="",queueCtx="",libChip="Playlists";
+var LY={},LP={},lyCur=-1,lyK=null,npK=null,CTX="",queueCtx="",libChip="Me gusta";
 try{LY=JSON.parse(localStorage.getItem("tb4ly")||"{}")}catch(e){}
 function saveLY(){try{localStorage.setItem("tb4ly",JSON.stringify(LY))}catch(e){toast("No hay espacio para guardar más letras")}}
 function lrcParse(t){var L=[],meta={},sy=false;
@@ -844,8 +847,10 @@ function npCards(){var t=queue[qi];if(!t)return;var a=AR[norm(t.artist)],img=a&&
 $("abt").onclick=function(){var t=queue[qi];if(!t)return;open={t:"artist",k:t.artist};tab="home";$("np").classList.remove("show");render();scrollTo(0,0)};
 $("nxq").onclick=function(e){if(e.target.id=="nxo")$("bq").click()};
 function it(o,c,t,sub){return S.libGrid?'<div class="gc" '+o+'>'+c+'<div class="t">'+t+'</div><div class="a">'+sub+'</div></div>':'<div class="row lk" '+o+'>'+c+'<div class="m"><div class="t">'+t+'</div><div class="a">'+sub+'</div></div><span class="chev">›</span></div>'}
-function libView(){var h='<div class="th">'+avBtn()+'<h1>Tu biblioteca</h1><button class="ib" data-go="search">'+ICO.srch+'</button><button class="ib" data-go="plus">'+ICO.plus+'</button></div><div class="chips">'+["Playlists","Siguiendo","Descargas","Artistas","Álbumes","Géneros","Canciones"].map(function(g){return '<button data-lchip="'+g+'" class="'+(g==libChip?'on':'')+'">'+g+'</button>'}).join("")+'</div><div class="lbar"><button class="sortb" data-sort="1">'+ICO.sort+(S.sort=="az"?"Orden alfabético":"Recientes")+'</button><span style="flex:1"></span><button class="ib" data-lgrid="1">'+(S.libGrid?ICO.list:ICO.grid)+'</button></div>';
-  if(libChip=="Playlists"){var its=[it('data-open="fav_0"','<div class="cv" style="background:linear-gradient(135deg,#450af5,#8e8ee5)">♥</div>',"Canciones que te gustan","Playlist · "+nc(Object.keys(likes).length))].concat(lists.map(function(p,i){return it('data-open="list_'+i+'"',cover(p.name),esc(p.name),"Playlist · "+nc(plTracks(p).length))}));
+function libView(){var h='<div class="th">'+avBtn()+'<h1>Tu biblioteca</h1><button class="ib" data-go="search">'+ICO.srch+'</button><button class="ib" data-go="plus">'+ICO.plus+'</button></div><div class="chips">'+["Me gusta","Playlists","Siguiendo","Descargas","Artistas","Álbumes","Géneros","Canciones"].map(function(g){return '<button data-lchip="'+g+'" class="'+(g==libChip?'on':'')+'">'+g+'</button>'}).join("")+'</div><div class="lbar"><button class="sortb" data-sort="1">'+ICO.sort+(S.sort=="az"?"Orden alfabético":"Recientes")+'</button><span style="flex:1"></span><button class="ib" data-lgrid="1">'+(S.libGrid?ICO.list:ICO.grid)+'</button></div>';
+  if(libChip=="Me gusta"){var lk=srt(lib.filter(function(x){return likes[x.k]})),lc=srt(lib.filter(function(x){return!likes[x.k]}));
+    h+='<h3 class="hs">Canciones que te gustan · '+nc(lk.length)+'</h3>'+(lk.length?list(lk):'<div class="empty">Toca ♥ en cualquier canción para guardarla aquí.</div>')+'<h3 class="hs">Música local · '+nc(lc.length)+'</h3>'+(lib.length?(lc.length?list(lc):'<div class="empty">Todo tu contenido local ya está en tus me gusta.</div>'):'<div class="empty">Escanea tu dispositivo para ver aquí tu música local.</div>')}
+  else if(libChip=="Playlists"){var its=[it('data-open="fav_0"','<div class="cv" style="background:linear-gradient(135deg,#450af5,#8e8ee5)">♥</div>',"Canciones que te gustan","Playlist · "+nc(Object.keys(likes).length))].concat(lists.map(function(p,i){return it('data-open="list_'+i+'"',cover(p.name),esc(p.name),"Playlist · "+nc(plTracks(p).length))}));
     h+=(S.libGrid?'<div class="gridc">'+its.join("")+'</div>':its.join(""))+'<div style="margin-top:10px"><button data-newpl="1">＋ Nueva playlist</button></div>'}
   else if(libChip=="Siguiendo")h+=followView();else if(libChip=="Descargas")h+=dlView();else if(libChip=="Canciones")h+=list(srt(lib));
   else{var f=libChip=="Artistas"?"artist":libChip=="Géneros"?"genre":"album",m=uniq(f),its2=ks(m).map(function(k){return it('data-open="'+f+'_'+esc(k)+'"',(f=="artist"?cover(k,"",m[k][0]).replace('class="cv"','class="cv rd"'):cover(k,"",m[k][0])),esc(k),f=="artist"?"Artista":f=="album"?"Álbum · "+esc(m[k][0].artist):"Género · "+nc(m[k].length))});h+=S.libGrid?'<div class="gridc">'+its2.join("")+'</div>':its2.join("")}

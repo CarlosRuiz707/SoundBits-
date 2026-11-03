@@ -22,10 +22,14 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import java.net.URLEncoder;
 
 /* YouTube móvil dentro de Tunebox: barra de búsqueda arriba (estilo Brave) y controles abajo.
-   Este WebView NO tiene el puente "Android": la página de YouTube no puede llamar a la app. */
+   Este WebView NO tiene el puente "Android" de la app. Solo expone "TBSB", un puente mínimo de SponsorBlock
+   (consultar segmentos de un ID de vídeo válido y avisar de un salto); la página no puede hacer nada más. */
 public class YouTubeActivity extends Activity {
   static final String HOME = "https://m.youtube.com/";
   static final int BG = 0xFF121212, CARD = 0xFF1F1F1F, TX = 0xFFFFFFFF, MU = 0xFFB3B3B3, AC = 0xFF1ED760;
@@ -38,6 +42,40 @@ public class YouTubeActivity extends Activity {
   View customView;
   WebChromeClient chrome;
   WebChromeClient.CustomViewCallback customCb;
+
+  /* SponsorBlock en YouTube web: busca el ID de vídeo de la página y salta los segmentos de la comunidad */
+  static final String SB_JS = """
+(function(){if(window.__tbSb)return;window.__tbSb=1;
+var vid="",segs=[],last=-1;
+window.__tbSbSet=function(id,a){if(id===vid){segs=a||[];last=-1}};
+function cur(){var p=location.pathname;
+if(p.indexOf("/shorts/")===0){var s=p.substr(8,11);return /^[A-Za-z0-9_-]{11}$/.test(s)?s:""}
+var v=new URLSearchParams(location.search).get("v");return v&&/^[A-Za-z0-9_-]{11}$/.test(v)?v:""}
+setInterval(function(){var id=cur();
+if(id!==vid){vid=id;segs=[];last=-1;if(id){try{TBSB.segments(id)}catch(e){}}}
+var v=document.querySelector("video");if(!v||!segs.length)return;var t=v.currentTime;
+for(var i=0;i<segs.length;i++){var x=segs[i];
+if(t>=x.start&&t<x.end&&last!==i){last=i;v.currentTime=Math.min(x.end+0.15,v.duration||x.end+0.15);
+try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
+""";
+
+  class Sb {
+    @JavascriptInterface public void segments(final String id) {
+      if (id == null || !id.matches("[A-Za-z0-9_-]{11}")) return;
+      new Thread(new Runnable() { public void run() {
+        final String data = MainActivity.sbQuery(id).toString();
+        runOnUiThread(new Runnable() { public void run() {
+          if (web != null) web.evaluateJavascript("window.__tbSbSet&&__tbSbSet(" + JSONObject.quote(id) + "," + data + ")", null);
+        } });
+      } }, "SponsorBlock-yt").start();
+    }
+    @JavascriptInterface public void skipped(final String cat) {
+      if (cat == null || !MainActivity.SB_ALL.contains(cat)) return;
+      runOnUiThread(new Runnable() { public void run() {
+        Toast.makeText(YouTubeActivity.this, "SponsorBlock: segmento omitido (" + cat + ")", Toast.LENGTH_SHORT).show();
+      } });
+    }
+  }
 
   int dp(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
 
@@ -120,6 +158,7 @@ public class YouTubeActivity extends Activity {
     s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
     s.setSupportZoom(false);
     s.setBuiltInZoomControls(false);
+    web.addJavascriptInterface(new Sb(), "TBSB");
     CookieManager cm = CookieManager.getInstance();
     cm.setAcceptCookie(true);
     cm.setAcceptThirdPartyCookies(web, true);
@@ -134,6 +173,10 @@ public class YouTubeActivity extends Activity {
         return true;
       }
       public void doUpdateVisitedHistory(WebView v, String url, boolean isReload) { showUrl(url); }
+      public void onPageFinished(WebView v, String url) {
+        Uri u = Uri.parse(url == null ? "" : url);
+        if ("https".equals(u.getScheme()) && ytHost(u.getHost())) v.evaluateJavascript(SB_JS, null);
+      }
     });
     chrome = new WebChromeClient() {
       public void onProgressChanged(WebView v, int p) {
