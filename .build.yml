@@ -15,6 +15,7 @@ jobs:
           gradle-version: '8.7'
       - name: Arrange project folders
         run: |
+          rm -f *\(*\).java *\(*\).html
           mkdir -p app/src/main/java/app/tunebox app/src/main/assets
           mv MainActivity.java PlayService.java NativeEngine.java app/src/main/java/app/tunebox/
           mv AndroidManifest.xml app/src/main/

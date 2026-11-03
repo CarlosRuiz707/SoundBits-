@@ -20,6 +20,9 @@ tasks.register('arrange') {
         genRes.mkdirs(); genJava.mkdirs()
         rootFiles.listFiles().each { f ->
             if (!f.isFile()) return
+            // Ignora copias sueltas como "MainActivity (1).java": duplican la clase y rompen javac
+            if (f.name.endsWith('.java') && !f.name.matches('[A-Za-z_][A-Za-z0-9_]*\\.java')) return
+            if (f.name.startsWith('res_') && !f.name.matches('res_[a-z0-9]+_[A-Za-z0-9_.]+')) return
             if (f.name.startsWith('res_')) {
                 def parts = f.name.split('_', 3)
                 def d = new File(genRes, parts[1]); d.mkdirs()
@@ -35,7 +38,7 @@ preBuild.dependsOn 'arrange'
 android {
     namespace 'app.tunebox'
     compileSdk 35
-    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 12; versionName "2.1" }
+    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 13; versionName "2.1.1" }
     sourceSets { main { res.srcDir genRes; java.srcDir genJava } }
     signingConfigs {
         debug {
