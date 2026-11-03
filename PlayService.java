@@ -26,15 +26,15 @@ public class PlayService extends Service {
       public void onPause() { cmd("pause"); }
       public void onSkipToNext() { cmd("next"); }
       public void onSkipToPrevious() { cmd("prev"); }
-      public void onSeekTo(long p) { MainActivity m = MainActivity.inst; if (m != null) m.js("window.tbSeek&&tbSeek(" + (p / 1000.0) + ")"); }
+      public void onSeekTo(long p) { if (NativeEngine.active()) { NativeEngine.seek(p); return; } MainActivity m = MainActivity.inst; if (m != null) m.js("window.tbSeek&&tbSeek(" + (p / 1000.0) + ")"); }
     });
     ms.setActive(true);
   }
-  static void cmd(String c) { MainActivity m = MainActivity.inst; if (m != null) m.js("window.tbCmd&&tbCmd('" + c + "')"); }
+  static void cmd(String c) { if (NativeEngine.active()) { NativeEngine.cmd(c); return; } MainActivity m = MainActivity.inst; if (m != null) m.js("window.tbCmd&&tbCmd('" + c + "')"); }
   public int onStartCommand(Intent i, int f, int s) {
     String a = i == null ? null : i.getAction();
     if (a == null) push();
-    else if (a.equals("stop")) { cmd("pause"); stopSelf(); }
+    else if (a.equals("stop")) { cmd("pause"); NativeEngine.stop(); stopSelf(); }
     else cmd(a);
     return START_NOT_STICKY;
   }
@@ -80,6 +80,7 @@ public class PlayService extends Service {
     try { if (playbackLock != null && playbackLock.isHeld()) playbackLock.release(); } catch (Exception ignored) {}
     try { ms.release(); } catch (Exception ignored) {}
     PlayWidget.refresh(this);
+    NativeEngine.stop();
     super.onDestroy();
   }
   public IBinder onBind(Intent i) { return null; }

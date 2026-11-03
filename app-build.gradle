@@ -35,7 +35,7 @@ preBuild.dependsOn 'arrange'
 android {
     namespace 'app.tunebox'
     compileSdk 35
-    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 10; versionName "1.9" }
+    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 11; versionName "2.0" }
     sourceSets { main { res.srcDir genRes; java.srcDir genJava } }
     signingConfigs {
         debug {
@@ -53,6 +53,7 @@ android {
 dependencies {
     // Google Sign-In nativo mediante Credential Manager + Firebase Authentication.
     implementation 'androidx.annotation:annotation:1.9.1'
+    implementation 'androidx.media3:media3-exoplayer:1.5.1'
     implementation 'androidx.credentials:credentials:1.5.0'
     implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
     implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'

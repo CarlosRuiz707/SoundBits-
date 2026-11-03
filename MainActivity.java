@@ -56,6 +56,7 @@ public class MainActivity extends Activity {
   static String okCmd(String c) { return c != null && CMDS.contains(c) ? c : null; }
   String pendingCmd;
   /* SponsorBlock: categorías activas (las envía la interfaz; vacío = desactivado) */
+  static volatile boolean vis;
   static volatile String sbCats = "sponsor,selfpromo,interaction,music_offtopic";
   static final Set<String> SB_ALL = new HashSet<String>(Arrays.asList("sponsor", "selfpromo", "interaction", "intro", "outro", "preview", "music_offtopic", "filler"));
   WebView w;
@@ -215,15 +216,22 @@ public class MainActivity extends Activity {
         });
   }
 
+  protected void onStart() {
+    super.onStart();
+    vis = true;
+  }
+
   protected void onStop() {
     super.onStop();
+    vis = false;
     js("window.tbBg&&tbBg()");
   }
 
   protected void onDestroy() {
     inst = null;
     if (yw != null) { try { root.removeView(yw); yw.destroy(); } catch (Exception e) {} yw = null; }
-    try { stopService(new Intent(this, PlayService.class)); } catch (Exception e) {}
+    // Si el motor nativo sigue activo, la música continúa sin la interfaz
+    if (!NativeEngine.active()) { try { stopService(new Intent(this, PlayService.class)); } catch (Exception e) {} }
     super.onDestroy();
   }
 
@@ -899,6 +907,20 @@ setInterval(function(){
     }
     /* Mantener el servicio en primer plano también en pausa */
     @JavascriptInterface public void setPersist(boolean b) { PlayService.persist = b; }
+    /* ---- Motor nativo Media3 ExoPlayer ---- */
+    @JavascriptInterface public void npLoad(String json) { NativeEngine.load(getApplicationContext(), json); }
+    @JavascriptInterface public void npSync(String json) { NativeEngine.sync(json); }
+    @JavascriptInterface public void npJump(int i) { NativeEngine.jump(i); }
+    @JavascriptInterface public void npPlay() { NativeEngine.play(); }
+    @JavascriptInterface public void npPause() { NativeEngine.pause(); }
+    @JavascriptInterface public void npSeek(long ms) { NativeEngine.seek(ms); }
+    @JavascriptInterface public void npNext() { NativeEngine.next(); }
+    @JavascriptInterface public void npPrev() { NativeEngine.prev(); }
+    @JavascriptInterface public void npStop() { NativeEngine.stop(); }
+    @JavascriptInterface public void npOpts(boolean s, boolean r, double sp) { NativeEngine.opts(s, r, sp); }
+    @JavascriptInterface public void npEq(double lo, double mi, double hi) { NativeEngine.eq(lo, mi, hi); }
+    @JavascriptInterface public boolean npOn() { return NativeEngine.active(); }
+    @JavascriptInterface public String npState() { return NativeEngine.state(); }
     /* Pide excluir la app del ahorro de batería */
     @JavascriptInterface public void batteryAsk() {
       runOnUiThread(new Runnable() { public void run() {
