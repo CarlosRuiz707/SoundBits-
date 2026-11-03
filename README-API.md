@@ -1,52 +1,69 @@
-# SoundBits — adaptador de API intercambiable
+# Tunebox — servidor de YouTube Music (ytmusicapi)
 
-La aplicación puede mantener una sola interfaz de resultados. El backend normaliza la respuesta de cada proveedor al mismo formato, así puedes cambiar la API sin rehacer el diseño.
+Servidor Flask (`ytmusic_api_server.py`) que usa [ytmusicapi](https://github.com/sigma67/ytmusicapi).
+La app lo usa para **buscar en YouTube Music sin clave de Google** y para **guardar canciones en tus playlists**.
 
-## Modo de demostración (predeterminado)
+- Buscar, artistas y álbumes: funcionan **sin iniciar sesión**.
+- Ver/crear playlists y añadir canciones: requieren OAuth de tu cuenta.
 
-```env
-API_PROVIDER=revanced_mock
-API_BASE_URL=https://api.revanced.app/v4
+## 1. Instalar y probar la búsqueda
+
+```bash
+pip install -r requirements.txt
+python ytmusic_api_server.py        # http://localhost:3000/search?q=oasis%20wonderwall&type=songs
 ```
 
-`GET /search?q=...` devuelve un resultado marcado como `demo: true`. Esto permite probar la ruta de la aplicación y el formato de datos sin fingir que el dominio inventado existe ni enviar peticiones que fallarán.
+## 2. Activar las playlists (OAuth)
 
-## API hipotética del usuario
+Desde noviembre de 2024 YouTube Music exige tus propias credenciales de Google:
 
-Cuando tengas un servicio real detrás de esa dirección, configura:
+1. En [Google Cloud Console](https://console.cloud.google.com/) crea un proyecto y habilita **YouTube Data API v3**.
+2. Credenciales → **ID de cliente de OAuth** → tipo **TVs y dispositivos de entrada limitada**.
+   Copia el *client id* y el *client secret*. En la pantalla de consentimiento añade tu cuenta como usuario de prueba.
+3. Genera `oauth.json`:
 
-```env
-API_PROVIDER=revanced
-API_BASE_URL=https://api.revanced.app/v4
+```bash
+ytmusicapi oauth --client-id TU_ID --client-secret TU_SECRET --file oauth.json
 ```
 
-El backend hará `GET https://api.revanced.app/v4/search?q=consulta`. La ruta es un contrato teórico, no una API verificada. El servicio debería responder con `items` o `results`, por ejemplo:
+4. Variables de entorno (ver `.env.example`):
 
-```json
-{"items":[{"id":"VIDEO_ID","title":"Nombre de la canción","artist":"Artista","thumbnail":"https://example.com/cover.jpg","url":"https://www.youtube.com/watch?v=VIDEO_ID","duration":0}]}
+```bash
+export YTM_CLIENT_ID=TU_ID
+export YTM_CLIENT_SECRET=TU_SECRET
+export TUNEBOX_API_KEY=una-clave-larga-y-aleatoria
+python ytmusic_api_server.py
 ```
 
-Se aceptan también los campos alternativos `videoId`, `name`, `channelTitle`, `art` y `thumbnailUrl`.
+Importante: ya **no** basta con `YTMusic('oauth.json')`. El código correcto es:
 
-## Cambiar a YouTube Data API v3
+```python
+from ytmusicapi import YTMusic, OAuthCredentials
 
-Configura estas variables en el servidor:
-
-```env
-API_PROVIDER=youtube_data_api
-YOUTUBE_DATA_API_BASE_URL=https://www.googleapis.com/youtube/v3
-YOUTUBE_DATA_API_KEY=TU_CLAVE_DE_GOOGLE_CLOUD
+yt = YTMusic('oauth.json', oauth_credentials=OAuthCredentials(client_id=ID, client_secret=SECRET))
+playlist_id = yt.create_playlist('test', 'test description')
+results = yt.search('Oasis Wonderwall', filter='songs')
+yt.add_playlist_items(playlist_id, [results[0]['videoId']])
 ```
 
-El backend llama al endpoint `/search` oficial y normaliza los metadatos al mismo formato que SoundBits usa. Habilita YouTube Data API v3 en Google Cloud y restringe la clave. No pongas la clave en `index.html` ni en un repositorio público.
+No subas `oauth.json` ni las claves a un repositorio público. En hostings sin disco persistente pega el contenido de `oauth.json` en `YTM_OAUTH_JSON`.
 
-## Endpoints del backend
+## 3. Conectar la app
 
-- `GET /health`: estado del backend y proveedor seleccionado.
-- `GET /search?q=Daft%20Punk`: búsqueda mediante el proveedor elegido.
-- `GET /artist/<texto>` y `GET /album/<texto>`: rutas del proveedor ytmusicapi existente.
-- `POST /playlist/create` y `POST /playlist/add`: requieren OAuth de YouTube Music.
+Despliega el servidor con **HTTPS** (el `Procfile` ya usa gunicorn). En la app: *Ajustes → YouTube Music (servidor)*:
+la dirección (`https://tu-servidor`) y la `TUNEBOX_API_KEY`. Desde ese momento la búsqueda de YouTube usa ytmusicapi y cada resultado
+tiene un botón ＋ para guardarlo en una de tus playlists o en una nueva.
 
-## Límites
+## Endpoints
 
-La YouTube Data API devuelve metadatos de vídeos, no URLs directas de audio. Para reproducir contenido usa un reproductor permitido por YouTube o una fuente que autorice la reproducción. El modo `revanced_mock` es solo demostrativo y no reproduce una canción real.
+| Ruta | Descripción | Requiere clave |
+|---|---|---|
+| `GET /health` | Estado (búsqueda, OAuth, protección) | no |
+| `GET /search?q=…&type=songs\|all&limit=10` | Búsqueda normalizada | no |
+| `GET /artist/<texto>` · `GET /album/<texto>` | Artista / álbum | no |
+| `GET /playlists` | Tus playlists de la biblioteca | OAuth |
+| `POST /playlist/create` `{title, description}` | Crea una playlist | `X-Tunebox-Key` |
+| `POST /playlist/add` `{playlistId, videoId \| videoIds \| query}` | Añade canciones | `X-Tunebox-Key` |
+| `POST /playlist/create-and-add` `{title, query}` | Crea y añade la primera coincidencia | `X-Tunebox-Key` |
+
+Las acciones que modifican tu cuenta quedan bloqueadas mientras no definas `TUNEBOX_API_KEY`, para que nadie más pueda tocar tus playlists.

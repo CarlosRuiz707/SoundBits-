@@ -509,6 +509,9 @@ document.addEventListener("click",function(e){var g,t=e.target;
   if(g=t.closest("[data-fola]")){folA(g.dataset.fola);render();return}
   if(g=t.closest("[data-dlp]")){dlPlay(g.dataset.dlp);return}
   if(g=t.closest("[data-mi]")){mplay(+g.dataset.mi);return}
+  if(g=t.closest("[data-yadd]")){ytAdd(+g.dataset.yadd);return}
+  if(g=t.closest("[data-ypl]")){ytSave(g.dataset.ypl,g.dataset.yv);return}
+  if(g=t.closest("[data-ynew]")){ytNew(g.dataset.ynew);return}
   if(g=t.closest("[data-yi]")){yplay(+g.dataset.yi);return}
   if(t.closest("[data-ytq]")){ytRun();return}
   if(t.closest("[data-ytset]")){tab="set";open=null;render();scrollTo(0,0);return}});
@@ -529,6 +532,8 @@ window.goBack=function(){if($("ly").classList.contains("show")){$("ly").classLis
 $("main").oninput=function(e){var i=e.target;
   if(i.id=="repo"){S.repo=i.value.trim();svS();return}
   if(i.id=="ytk"){S.ytk=i.value.trim();svS();return}
+  if(i.id=="ytm"){S.ytm=i.value.trim();YTR={};svS();return}
+  if(i.id=="ytmk"){S.ytmk=i.value.trim();svS();return}
   if(i.id=="q"){q=i.value;var rr=$("res");if(rr){rr.innerHTML=res();obs()}return}
   if(i.dataset.c){S.ac=i.value;applyS();svS();return}
   if(i.dataset.r){var k=i.dataset.r,v=+i.value;if(/^eq\d/.test(k))S.eq[+k[2]]=v;else S[k]=v;if(k=="vol")setVol(v);applyS();svS();var l=$("v_"+k);if(l)l.textContent=v+(k=="rad"?"px":(k=="fs"||k=="cvInt"||k=="vol")?"%":" dB")}};
@@ -663,22 +668,34 @@ window.ytEv=function(str){var m;try{m=JSON.parse(str)}catch(e){return}if(!isYT()
   else if(m.e=="err"){if(++YV.errs>3){YV.errs=0;ytSet(2);toast("No se pudo reproducir estos vídeos aquí");return}toast("Este vídeo no se puede reproducir aquí. Saltando…");setTimeout(next,800)}};
 function ytTrack(x){var t=mk({title:x.title,artist:x.artist,album:"YouTube",dur:0,genre:"YouTube",added:Date.now()});t.yt=x.id;t.art=x.art||"";t.url="https://www.youtube.com/watch?v="+x.id;t.src="";t.resume=0;return t}
 function yplay(i){var it=YTCUR[i];if(!it)return;if(!AN){window.open("https://www.youtube.com/watch?v="+it.id);return}CTX="YouTube";play(YTCUR.map(ytTrack),i)}
+function ytmBase(){return(S.ytm||"").trim().replace(/\/+$/,"")}
+function ytmFetch(path,opt){opt=opt||{};opt.headers=Object.assign({"Content-Type":"application/json"},S.ytmk?{"X-Tunebox-Key":S.ytmk}:{});
+  return fetch(ytmBase()+path,opt).then(function(r){return r.json().then(function(d){if(!r.ok)throw Error(d&&d.error?d.error:"Error "+r.status);return d})})}
 function ytSearch(t){
+  if(ytmBase())return ytmFetch("/search?type=songs&limit=15&q="+enc(t)).then(function(d){return(Array.isArray(d)?d:[]).filter(function(x){return x.id}).map(function(x){return{id:x.id,title:x.title||"",artist:x.artist||"",art:x.art||""}})});
   var url=(AN?"https://tb.local/s?q="+enc(t)+"&key="+enc(S.ytk):"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&videoEmbeddable=true&videoSyndicated=true&videoCategoryId=10&maxResults=15&q="+enc(t)+"&key="+enc(S.ytk));
   return fetch(url).then(function(r){return r.json().then(function(d){
     if(!r.ok)throw Error(d&&d.error&&d.error.message?d.error.message:"Error "+r.status);
     return(d.items||[]).filter(function(x){return x.id&&x.id.videoId}).map(function(x){var sn=x.snippet||{},th=sn.thumbnails||{};
       return{id:x.id.videoId,title:dec(sn.title),artist:dec(sn.channelTitle),art:(th.medium||th.default||{}).url||""}})})})}
-function yrow(x,i){return '<div class="row" data-yi="'+i+'">'+rowCv(x.title,x.art)+'<div class="m"><div class="t">'+esc(x.title)+'</div><div class="a">'+esc(x.artist)+' · YouTube</div></div><button class="ib" data-yi="'+i+'" aria-label="Reproducir">▶</button></div>'}
+function ytAdd(i){var it=YTCUR[i];if(!it)return;
+  $("sb").innerHTML='<b>Guardar en YouTube Music</b><div class="a" style="margin:4px 0 10px">'+esc(it.title)+' · '+esc(it.artist)+'</div><div class="a" id="ytpl">Cargando tus playlists…</div>';$("sheet").classList.add("show");
+  ytmFetch("/playlists").then(function(d){var h=(d||[]).map(function(p){return '<button data-ypl="'+esc(p.id)+'" data-yv="'+esc(it.id)+'">'+esc(p.title)+'</button>'}).join("");
+    h+='<div class="a" style="margin:10px 0 4px">Nueva playlist</div><input type="text" id="ynm" placeholder="Nombre"><button class="pri" data-ynew="'+esc(it.id)+'">Crear y añadir</button>';$("ytpl").outerHTML=h})
+  .catch(function(e){var b=$("ytpl");if(b)b.textContent="No se pudo cargar tus playlists: "+(e&&e.message||e)})}
+function ytSave(pl,v){closeSheet();ytmFetch("/playlist/add",{method:"POST",body:JSON.stringify({playlistId:pl,videoId:v})}).then(function(){toast("Añadida a tu playlist de YouTube Music")}).catch(function(e){toast("No se pudo añadir: "+(e&&e.message||e))})}
+function ytNew(v){var n=($("ynm")&&$("ynm").value.trim())||"Tunebox";closeSheet();
+  ytmFetch("/playlist/create",{method:"POST",body:JSON.stringify({title:n})}).then(function(d){return ytmFetch("/playlist/add",{method:"POST",body:JSON.stringify({playlistId:d.playlistId,videoId:v})})}).then(function(){toast("Playlist «"+n+"» creada en YouTube Music")}).catch(function(e){toast("No se pudo crear: "+(e&&e.message||e))})}
+function yrow(x,i){return '<div class="row" data-yi="'+i+'">'+rowCv(x.title,x.art)+'<div class="m"><div class="t">'+esc(x.title)+'</div><div class="a">'+esc(x.artist)+' · YouTube</div></div>'+(ytmBase()?'<button class="ib" data-yadd="'+i+'" aria-label="Guardar en una playlist de YouTube Music">＋</button>':'')+'<button class="ib" data-yi="'+i+'" aria-label="Reproducir">▶</button></div>'}
 function ytHtml(){var term=q.trim();if(term.length<2){YTCUR=[];return""}
-  if(!S.ytk)return'<h3 style="margin-top:20px">YouTube</h3><div class="a" style="margin:4px 0 8px">Añade tu clave de YouTube Data API para buscar canciones completas.</div><button class="pri ytq" data-ytset="1">Abrir ajustes</button>';
+  if(!S.ytk&&!ytmBase())return'<h3 style="margin-top:20px">YouTube</h3><div class="a" style="margin:4px 0 8px">Conecta tu servidor de YouTube Music o añade una clave de YouTube Data API para buscar canciones completas.</div><button class="pri ytq" data-ytset="1">Abrir ajustes</button>';
   var r=YTR[term];
   if(r){YTCUR=r;return'<h3 style="margin-top:20px">YouTube</h3>'+(r.length?r.map(yrow).join(""):'<div class="a" style="padding:10px 0">Sin resultados en YouTube.</div>')}
   YTCUR=[];
   if(YTL==term)return'<h3 style="margin-top:20px">YouTube</h3><div class="a" style="padding:10px 0">Buscando en YouTube…</div>';
   return'<h3 style="margin-top:20px">YouTube</h3>'+(YTE?'<div class="a" style="margin:4px 0">'+esc(YTE)+'</div>':'')+'<button class="pri ytq" data-ytq="1">Buscar «'+esc(term)+'» en YouTube</button>'}
 function ytRefresh(){var b=$("yt-results");if(b)b.innerHTML=ytHtml()}
-function ytRun(){var term=q.trim();if(term.length<2||!S.ytk||YTR[term]||YTL==term){ytRefresh();return}
+function ytRun(){var term=q.trim();if(term.length<2||(!S.ytk&&!ytmBase())||YTR[term]||YTL==term){ytRefresh();return}
   YTL=term;YTE="";ytRefresh();
   ytSearch(term).then(function(it){YTR[term]=it}).catch(function(e){YTE="No se pudo buscar en YouTube: "+(e&&e.message||e)}).then(function(){if(YTL==term)YTL="";ytRefresh()})}
 document.addEventListener("keydown",function(e){if(e.key=="Enter"&&e.target&&e.target.id=="q"&&tab=="search")ytRun()});
@@ -737,7 +754,7 @@ function pump(){if(LB||!LQ.length||!netOk())return;LB=true;var k=LQ.shift(),t=li
   if(!t||AC[k]||t.artist=="Artista desconocido"){LB=false;setTimeout(pump,0);return}
   fetch("https://tb.local/q?term="+encodeURIComponent(t.artist+" "+t.title)).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){var r=d.results&&d.results[0],ok=r&&(norm(r.trackName).indexOf(t.nt)>-1||t.nt.indexOf(norm(r.trackName))>-1);
     AC[k]=ok?{a:(r.artworkUrl100||"").replace("100x100","600x600"),g:r.primaryGenreName||""}:{n:1};if(ok&&AC[k].a)t.art=gimg(AC[k].a);try{localStorage.setItem("tb4art",JSON.stringify(AC))}catch(e){}if(++LC%6==0)render();done()}).catch(function(){done()})}
-var S={theme:"dark",bgd:"black",ac:"#ff0000",v5:7,lite:null,libGrid:false,repo:"CarlosRuiz707/Tunebox-v-0.1",cvSrc:"auto",sort:"az",wifiOnly:true,sb:true,sbc:["sponsor","selfpromo","interaction","music_offtopic"],persist:true,nat:true,rad:8,cov:"4px",fs:100,cvOn:true,cvStyle:"aurora",cvInt:100,cvPhoto:true,online:true,vol:70,eq:[0,0,0],sec:{quick:0,rec:1,mix:1,top:1,art:1,gen:1,alb:1}},plays={},lo,mi,hi,AR={};
+var S={theme:"dark",bgd:"black",ac:"#ff0000",v5:7,lite:null,libGrid:false,repo:"CarlosRuiz707/Tunebox-v-0.1",cvSrc:"auto",sort:"az",wifiOnly:true,sb:true,sbc:["sponsor","selfpromo","interaction","music_offtopic"],persist:true,nat:true,ytm:"",ytmk:"",rad:8,cov:"4px",fs:100,cvOn:true,cvStyle:"aurora",cvInt:100,cvPhoto:true,online:true,vol:70,eq:[0,0,0],sec:{quick:0,rec:1,mix:1,top:1,art:1,gen:1,alb:1}},plays={},lo,mi,hi,AR={};
 try{AR=JSON.parse(localStorage.getItem("tb4ar")||"{}")}catch(e){}
 function lsS(){try{var d=JSON.parse(localStorage.getItem("tb4s")||"null");if(d){var mg=(d.v5||0)<7;if(mg){d.ac="#ff0000";d.theme="dark";d.bgd="black";d.rad=8;d.cov="4px";d.v5=7}for(var k in d)S[k]=d[k];if(mg)svS()}}catch(e){}}
 function svS(){try{localStorage.setItem("tb4s",JSON.stringify(S))}catch(e){}}
@@ -760,7 +777,7 @@ function settingsView(){var sw=["#ff0000","#1ed760","#fa2d48","#0a84ff","#ff9f0a
   '<div class="card"><b>Canvas</b>'+tg("cvOn","Mostrar canvas")+'<div class="a">Estilo</div>'+seg("cvStyle",[["aurora","Aurora"],["bars","Barras"],["ring","Círculo"]])+'<div class="a">Imagen de fondo</div>'+seg("cvSrc",[["auto","Automático"],["artist","Artista"],["album","Álbum"]])+rng("cvInt",30,200,"Intensidad","%")+tg("cvPhoto","Foto del artista (internet)")+'<div class="a">Usa la foto del artista que suena; si no la encuentra, usa la carátula.</div></div>'+
   '<div class="card"><b>Sonido</b>'+rng("vol",0,100,"Volumen","%")+rng("eq0",-12,12,"Graves"," dB")+rng("eq1",-12,12,"Medios"," dB")+rng("eq2",-12,12,"Agudos"," dB")+'<div style="margin-top:6px"><button data-eqp="0,0,0">Plano</button> <button data-eqp="8,0,-2">Más graves</button> <button data-eqp="-3,5,2">Voces</button> <button data-eqp="-2,0,7">Brillante</button></div></div>'+
   '<div class="card"><b>Secciones del inicio</b>'+tg("quick","Accesos rápidos",1)+tg("rec","Escuchar de nuevo",1)+tg("mix","Hecho para ti",1)+tg("top","Más escuchadas",1)+tg("art","Artistas",1)+tg("gen","Géneros",1)+tg("alb","Álbumes",1)+'</div>'+
-  '<div class="card"><b>Datos y caché</b>'+tg("online","Buscar carátulas y géneros en internet")+tg("wifiOnly","Descargar solo con Wi‑Fi")+'<div class="a" style="margin-top:6px">Cada carátula y foto de artista (canvas) se descarga una sola vez y queda guardada en el teléfono. Espacio usado: '+cacheMB()+' MB. Envía título y artista a Apple y Deezer.</div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button data-prefetch="1">Descargar carátulas y canvas</button><button data-clrart="1">Borrar caché</button><button data-reset="1">Restablecer ajustes</button></div></div><div class="card"><b>SponsorBlock</b>'+sbCard()+'</div><div class="card"><b>Segundo plano</b>'+bgCard()+'</div><div class="card"><b>YouTube</b><div class="a" style="margin:2px 0 8px">Clave de YouTube Data API v3 (gratis en Google Cloud; restríngela a esa API). Se guarda solo en este teléfono.</div><input type="password" id="ytk" value="'+esc(S.ytk||"")+'" placeholder="AIza…" autocomplete="off"></div><div class="card"><b>Acerca de y actualizaciones</b><div class="a" style="margin:2px 0 10px">SoundBits · versión '+verTxt()+'</div><button class="pri" data-upd="1">Buscar actualizaciones</button><div class="a" style="margin-top:12px">Repositorio de GitHub</div><input type="text" id="repo" value="'+esc(S.repo)+'"></div>'}
+  '<div class="card"><b>Datos y caché</b>'+tg("online","Buscar carátulas y géneros en internet")+tg("wifiOnly","Descargar solo con Wi‑Fi")+'<div class="a" style="margin-top:6px">Cada carátula y foto de artista (canvas) se descarga una sola vez y queda guardada en el teléfono. Espacio usado: '+cacheMB()+' MB. Envía título y artista a Apple y Deezer.</div><div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button data-prefetch="1">Descargar carátulas y canvas</button><button data-clrart="1">Borrar caché</button><button data-reset="1">Restablecer ajustes</button></div></div><div class="card"><b>SponsorBlock</b>'+sbCard()+'</div><div class="card"><b>Segundo plano</b>'+bgCard()+'</div><div class="card"><b>YouTube Music (tu servidor)</b><div class="a" style="margin:2px 0 8px">Dirección HTTPS de tu servidor Tunebox con ytmusicapi. Busca canciones sin clave de Google y permite guardarlas en tus playlists de YouTube Music.</div><input type="text" id="ytm" value="'+esc(S.ytm||"")+'" placeholder="https://tu-servidor.com" autocomplete="off"><input type="password" id="ytmk" value="'+esc(S.ytmk||"")+'" placeholder="Clave del servidor (TUNEBOX_API_KEY)" autocomplete="off" style="margin-top:8px"></div><div class="card"><b>YouTube</b><div class="a" style="margin:2px 0 8px">Clave de YouTube Data API v3 (gratis en Google Cloud; restríngela a esa API). Se guarda solo en este teléfono.</div><input type="password" id="ytk" value="'+esc(S.ytk||"")+'" placeholder="AIza…" autocomplete="off"></div><div class="card"><b>Acerca de y actualizaciones</b><div class="a" style="margin:2px 0 10px">SoundBits · versión '+verTxt()+'</div><button class="pri" data-upd="1">Buscar actualizaciones</button><div class="a" style="margin-top:12px">Repositorio de GitHub</div><input type="text" id="repo" value="'+esc(S.repo)+'"></div>'}
 function recs(){return recents.map(function(k){return lib.filter(function(x){return x.k==k})[0]}).filter(Boolean).slice(0,10)}
 function tiles(){return '<div class="grid"><div class="tile" data-open="fav_0"><div class="cv" style="background:linear-gradient(135deg,#450af5,#8e8ee5)">♥</div><b>Te gustan</b></div><div class="tile" data-shuffle="1"><div class="cv" style="background:linear-gradient(135deg,#5e5ce6,#0a84ff)">⇄</div><b>Aleatorio</b></div>'+lists.slice(0,4).map(function(p,i){return '<div class="tile" data-open="list_'+i+'">'+cover(p.name)+'<b>'+esc(p.name)+'</b></div>'}).join("")+'</div>'}
 function shl(m,type){return '<div class="shelf">'+ks(m).slice(0,12).map(function(k){return '<div class="sc'+(type=="artist"?' rd':'')+'" data-open="'+type+'_'+esc(k)+'">'+cover(k,"",m[k][0])+'<div class="t" style="margin-top:6px;font-weight:600">'+esc(k)+'</div><div class="a">'+(type=="artist"?"Artista":nc(m[k].length))+'</div></div>'}).join("")+'</div>'}
