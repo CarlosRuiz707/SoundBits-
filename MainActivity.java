@@ -55,6 +55,9 @@ public class MainActivity extends Activity {
   static final Set<String> CMDS = new HashSet<String>(Arrays.asList("play", "pause", "next", "prev", "toggle"));
   static String okCmd(String c) { return c != null && CMDS.contains(c) ? c : null; }
   String pendingCmd;
+  /* SponsorBlock: categorías activas (las envía la interfaz; vacío = desactivado) */
+  static volatile String sbCats = "sponsor,selfpromo,interaction,music_offtopic";
+  static final Set<String> SB_ALL = new HashSet<String>(Arrays.asList("sponsor", "selfpromo", "interaction", "intro", "outro", "preview", "music_offtopic", "filler"));
   WebView w;
   ValueCallback<Uri[]> cb;
   volatile boolean wifiOnly = true;
@@ -723,6 +726,11 @@ setInterval(function(){
     /* SponsorBlock: consulta segmentos de patrocinio fuera del hilo principal. */
     @JavascriptInterface public void segments(final String videoId) {
       if (videoId == null || !videoId.matches("[A-Za-z0-9_-]{11}")) return;
+      final Set<String> allowed = new LinkedHashSet<String>();
+      String cfg = sbCats;
+      if (cfg != null) for (String c : cfg.split(",")) if (SB_ALL.contains(c)) allowed.add(c);
+      if (allowed.isEmpty()) return;
+      final String catsJson = new JSONArray(allowed).toString();
       new Thread(new Runnable() {
         public void run() {
           HttpURLConnection c = null;
@@ -730,7 +738,8 @@ setInterval(function(){
           try {
             Uri u = Uri.parse("https://sponsor.ajay.app/api/skipSegments").buildUpon()
                 .appendQueryParameter("videoID", videoId)
-                .appendQueryParameter("categories", "[\"sponsor\"]")
+                .appendQueryParameter("categories", catsJson)
+                .appendQueryParameter("actionTypes", "[\"skip\"]")
                 .build();
             c = (HttpURLConnection) new URL(u.toString()).openConnection();
             c.setRequestMethod("GET");
@@ -746,13 +755,15 @@ setInterval(function(){
               JSONArray raw = new JSONArray(body.toString());
               for (int i = 0; i < raw.length(); i++) {
                 JSONObject item = raw.optJSONObject(i);
-                if (item == null || !"sponsor".equals(item.optString("category"))) continue;
+                String cat = item == null ? "" : item.optString("category");
+                String at = item == null ? "" : item.optString("actionType", "skip");
+                if (item == null || !allowed.contains(cat) || !"skip".equals(at)) continue;
                 JSONArray times = item.optJSONArray("segment");
                 if (times == null || times.length() < 2) continue;
                 double start = times.optDouble(0, -1), end = times.optDouble(1, -1);
                 if (Double.isFinite(start) && Double.isFinite(end) && start >= 0 && end > start) {
                   JSONObject seg = new JSONObject();
-                  seg.put("start", start); seg.put("end", end); seg.put("category", "sponsor");
+                  seg.put("start", start); seg.put("end", end); seg.put("category", cat);
                   valid.put(seg);
                 }
               }
@@ -875,6 +886,34 @@ setInterval(function(){
       return "Este teléfono";
     }
     @JavascriptInterface public void setWifiOnly(boolean b) { wifiOnly = b; }
+    /* SponsorBlock: lista de categorías separadas por comas ("" = desactivado) */
+    @JavascriptInterface public void sbConfig(String cats) {
+      StringBuilder sb = new StringBuilder();
+      if (cats != null && cats.length() < 200) {
+        for (String c : cats.split(",")) {
+          c = c.trim();
+          if (SB_ALL.contains(c)) { if (sb.length() > 0) sb.append(','); sb.append(c); }
+        }
+      }
+      sbCats = sb.toString();
+    }
+    /* Mantener el servicio en primer plano también en pausa */
+    @JavascriptInterface public void setPersist(boolean b) { PlayService.persist = b; }
+    /* Pide excluir la app del ahorro de batería */
+    @JavascriptInterface public void batteryAsk() {
+      runOnUiThread(new Runnable() { public void run() {
+        try {
+          PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+          if (pm != null && pm.isIgnoringBatteryOptimizations(getPackageName())) {
+            js("window.toast&&toast('La app ya está excluida del ahorro de batería')");
+            return;
+          }
+          startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + getPackageName())));
+        } catch (Exception e) {
+          try { startActivity(new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); } catch (Exception ignored) {}
+        }
+      } });
+    }
     @JavascriptInterface public double cacheMB() {
       long t = 0; File[] fs = new File(getFilesDir(), "img").listFiles();
       if (fs != null) for (File x : fs) t += x.length();

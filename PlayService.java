@@ -5,6 +5,7 @@ import android.media.session.MediaSession;import android.media.session.PlaybackS
 public class PlayService extends Service {
   static PlayService inst;
   static String title = "Tunebox", artist = "", album = "", artKey = "";
+  static boolean persist = true;
   static boolean playing = false; static Bitmap art; static long posMs = 0, durMs = 0;
   MediaSession ms; NotificationManager nm; Handler h = new Handler(Looper.getMainLooper()); boolean fg = false;
   PowerManager.WakeLock playbackLock;
@@ -63,12 +64,14 @@ public class PlayService extends Service {
     if (art != null) b.setLargeIcon(art);
     b.addAction(na(android.R.drawable.ic_media_previous, "Anterior", "prev"))
      .addAction(na(playing ? android.R.drawable.ic_media_pause : android.R.drawable.ic_media_play, playing ? "Pausa" : "Reproducir", "toggle"))
-     .addAction(na(android.R.drawable.ic_media_next, "Siguiente", "next"));
+     .addAction(na(android.R.drawable.ic_media_next, "Siguiente", "next"))
+     .addAction(na(android.R.drawable.ic_menu_close_clear_cancel, "Cerrar", "stop"));
     b.setStyle(new Notification.MediaStyle().setMediaSession(ms.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
     Notification n = b.build();
+    boolean keep = playing || persist;
     try {
-      if (playing || !fg) { if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK); else startForeground(1, n); fg = true; }
-      if (!playing) { stopForeground(false); fg = false; nm.notify(1, n); }
+      if (keep || !fg) { if (Build.VERSION.SDK_INT >= 29) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK); else startForeground(1, n); fg = true; }
+      if (!keep) { stopForeground(false); fg = false; nm.notify(1, n); }
     } catch (Exception e) { nm.notify(1, n); }
     PlayWidget.refresh(this);
   }
