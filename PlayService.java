@@ -7,9 +7,17 @@ public class PlayService extends Service {
   static String title = "Tunebox", artist = "", album = "", artKey = "";
   static boolean playing = false; static Bitmap art; static long posMs = 0, durMs = 0;
   MediaSession ms; NotificationManager nm; Handler h = new Handler(Looper.getMainLooper()); boolean fg = false;
+  PowerManager.WakeLock playbackLock;
   public void onCreate() {
     super.onCreate(); inst = this;
     nm = getSystemService(NotificationManager.class);
+    try {
+      PowerManager pm = getSystemService(PowerManager.class);
+      if (pm != null) {
+        playbackLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, getPackageName() + ":TuneBoxPlayback");
+        playbackLock.setReferenceCounted(false);
+      }
+    } catch (Exception ignored) {}
     if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(new NotificationChannel("tb", "Reproducción", NotificationManager.IMPORTANCE_LOW));
     ms = new MediaSession(this, "Tunebox");
     ms.setCallback(new MediaSession.Callback() {
@@ -32,7 +40,17 @@ public class PlayService extends Service {
   void refresh() { h.post(new Runnable() { public void run() { push(); } }); }
   PendingIntent act(String a) { return PendingIntent.getService(this, a.hashCode(), new Intent(this, PlayService.class).setAction(a), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT); }
   Notification.Action na(int ic, String t, String a) { return new Notification.Action.Builder(Icon.createWithResource(this, ic), t, act(a)).build(); }
+  void syncWakeLock() {
+    try {
+      if (playing) {
+        if (playbackLock != null && !playbackLock.isHeld()) playbackLock.acquire();
+      } else if (playbackLock != null && playbackLock.isHeld()) {
+        playbackLock.release();
+      }
+    } catch (Exception ignored) {}
+  }
   void push() {
+    syncWakeLock();
     MediaMetadata.Builder mb = new MediaMetadata.Builder().putString(MediaMetadata.METADATA_KEY_TITLE, title).putString(MediaMetadata.METADATA_KEY_ARTIST, artist).putString(MediaMetadata.METADATA_KEY_ALBUM, album).putLong(MediaMetadata.METADATA_KEY_DURATION, durMs);
     if (art != null) mb.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, art);
     ms.setMetadata(mb.build());
@@ -54,6 +72,12 @@ public class PlayService extends Service {
     } catch (Exception e) { nm.notify(1, n); }
     PlayWidget.refresh(this);
   }
-  public void onDestroy() { inst = null; try { ms.release(); } catch (Exception e) {} PlayWidget.refresh(this); super.onDestroy(); }
+  public void onDestroy() {
+    inst = null;
+    try { if (playbackLock != null && playbackLock.isHeld()) playbackLock.release(); } catch (Exception ignored) {}
+    try { ms.release(); } catch (Exception ignored) {}
+    PlayWidget.refresh(this);
+    super.onDestroy();
+  }
   public IBinder onBind(Intent i) { return null; }
 }

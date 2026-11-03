@@ -17,6 +17,7 @@ import android.os.*;
 import android.provider.MediaStore;
 import android.util.Size;
 import android.view.View;
+import android.widget.FrameLayout;
 import android.webkit.*;
 import android.os.CancellationSignal;
 import androidx.annotation.NonNull;
@@ -46,6 +47,10 @@ import org.xmlpull.v1.XmlPullParser;
 
 public class MainActivity extends Activity {
   static MainActivity inst;
+  FrameLayout root;
+  WebView yw;            // reproductor de YouTube (vista aparte, SIN el puente Android)
+  boolean ywReady;
+  String ywPending;
   /* Solo estos comandos pueden llegar por intent (evita inyectar JS desde otras apps) */
   static final Set<String> CMDS = new HashSet<String>(Arrays.asList("play", "pause", "next", "prev", "toggle"));
   static String okCmd(String c) { return c != null && CMDS.contains(c) ? c : null; }
@@ -65,7 +70,9 @@ public class MainActivity extends Activity {
     boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
     w = new WebView(this);
     w.setBackgroundColor(dark ? Color.BLACK : Color.WHITE);
-    setContentView(w);
+    root = new FrameLayout(this);
+    root.addView(w, new FrameLayout.LayoutParams(-1, -1));
+    setContentView(root);
     w.setOverScrollMode(View.OVER_SCROLL_NEVER);
     WebSettings s = w.getSettings();
     s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(true); s.setMediaPlaybackRequiresUserGesture(false);
@@ -212,6 +219,7 @@ public class MainActivity extends Activity {
 
   protected void onDestroy() {
     inst = null;
+    if (yw != null) { try { root.removeView(yw); yw.destroy(); } catch (Exception e) {} yw = null; }
     try { stopService(new Intent(this, PlayService.class)); } catch (Exception e) {}
     super.onDestroy();
   }
@@ -615,12 +623,184 @@ public class MainActivity extends Activity {
     return null;
   }
 
+  /* ---------- YouTube: reproductor oficial (IFrame API) en una vista aparte ---------- */
+  void ensureYw() {
+    if (yw != null) return;
+    yw = new WebView(this);
+    yw.setBackgroundColor(Color.BLACK);
+    WebSettings ws = yw.getSettings();
+    ws.setJavaScriptEnabled(true); ws.setDomStorageEnabled(true);
+    ws.setAllowFileAccess(false); ws.setAllowContentAccess(false);
+    ws.setMediaPlaybackRequiresUserGesture(false);
+    ws.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+    yw.addJavascriptInterface(new Yb(), "YB");
+    yw.setWebViewClient(new WebViewClient() {
+      public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) {
+        Uri u = r.getUrl();
+        if (!"tb.local".equals(u.getHost())) return null;
+        Map<String, String> hd = new HashMap<>();
+        try { if ("/yp".equals(u.getPath())) return ytPage(hd); } catch (Exception e) {}
+        return err(hd, 404);
+      }
+      public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { return r.isForMainFrame(); }
+      public void onPageFinished(WebView v, String url) {
+        ywReady = true;
+        if (ywPending != null) { String c = ywPending; ywPending = null; ywEval(c); }
+      }
+    });
+    yw.setVisibility(View.GONE);
+    root.addView(yw, new FrameLayout.LayoutParams(1, 1));
+    yw.loadUrl("https://tb.local/yp");
+  }
+  void ywEval(String json) {
+    if (yw != null) yw.evaluateJavascript("window.tbp&&tbp(JSON.parse(" + JSONObject.quote(json) + "))", null);
+  }
+  /* Página servida en https://tb.local para que YouTube reciba un origen/referrer válido (evita el error 153) */
+  WebResourceResponse ytPage(Map<String, String> hd) throws IOException {
+    String html = """
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#p{position:absolute;top:0;left:0;width:100%;height:100%}</style></head>
+<body><div id="p"></div>
+<script>
+var P=null,ready=false,apiOk=false,pend=null;
+var sbVideo="",sbSegments=[],sbLast=-1;
+function send(o){try{YB.ev(JSON.stringify(o))}catch(e){}}
+function sbSetSegments(id,items){if(id!==sbVideo)return;sbSegments=Array.isArray(items)?items:[];sbLast=-1;send({e:"sponsorLoaded",n:sbSegments.length})}
+function tbp(m){
+  if(!m)return;
+  if(m.c=="load"){
+    sbVideo=m.id;sbSegments=[];sbLast=-1;
+    try{YB.segments(m.id)}catch(e){}
+    if(P&&ready){P.loadVideoById(m.id);if(m.r)P.setPlaybackRate(m.r)}
+    else{pend=m;mk()}
+    return}
+  if(!P||!ready)return;
+  if(m.c=="play")P.playVideo();
+  else if(m.c=="pause")P.pauseVideo();
+  else if(m.c=="seek")P.seekTo(m.t,true);
+  else if(m.c=="rate")P.setPlaybackRate(m.r);
+  else if(m.c=="stop")P.stopVideo();
+}
+function mk(){
+  if(P||!apiOk||!pend)return;
+  var m=pend;pend=null;
+  P=new YT.Player("p",{host:"https://www.youtube-nocookie.com",width:"100%",height:"100%",videoId:m.id,
+    playerVars:{autoplay:1,playsinline:1,rel:0,fs:0,modestbranding:1,iv_load_policy:3},
+    events:{
+      onReady:function(){ready=true;if(m.r)P.setPlaybackRate(m.r);if(pend){var x=pend;pend=null;tbp(x)}},
+      onStateChange:function(e){send({e:"state",s:e.data})},
+      onError:function(e){send({e:"err",c:e.data})}}});
+}
+function onYouTubeIframeAPIReady(){apiOk=true;mk()}
+setInterval(function(){
+  if(!P||!ready||!P.getCurrentTime)return;
+  var t=P.getCurrentTime(),d=P.getDuration();
+  send({e:"time",t:t,d:d});
+  for(var i=0;i<sbSegments.length;i++){
+    var x=sbSegments[i];
+    if(t>=x.start&&t<x.end&&sbLast!==i){
+      sbLast=i;
+      P.seekTo(Math.min(x.end+0.15,d||x.end+0.15),true);
+      send({e:"sponsorSkipped",category:x.category,start:x.start,end:x.end});
+      break;
+    }
+  }
+},500);
+</script>
+<script src="https://www.youtube.com/iframe_api"></script>
+</body></html>
+""";
+    hd.put("Cache-Control", "no-store");
+    return new WebResourceResponse("text/html", "utf-8", 200, "OK", hd, new ByteArrayInputStream(html.getBytes("UTF-8")));
+  }
+  /* Único puente de la vista de YouTube: solo reenvía eventos del reproductor a la página principal */
+  class Yb {
+    @JavascriptInterface public void ev(String s) {
+      if (s == null || s.length() > 2000) return;
+      js("window.ytEv&&ytEv(" + JSONObject.quote(s) + ")");
+    }
+
+    /* SponsorBlock: consulta segmentos de patrocinio fuera del hilo principal. */
+    @JavascriptInterface public void segments(final String videoId) {
+      if (videoId == null || !videoId.matches("[A-Za-z0-9_-]{11}")) return;
+      new Thread(new Runnable() {
+        public void run() {
+          HttpURLConnection c = null;
+          JSONArray valid = new JSONArray();
+          try {
+            Uri u = Uri.parse("https://sponsor.ajay.app/api/skipSegments").buildUpon()
+                .appendQueryParameter("videoID", videoId)
+                .appendQueryParameter("categories", "[\"sponsor\"]")
+                .build();
+            c = (HttpURLConnection) new URL(u.toString()).openConnection();
+            c.setRequestMethod("GET");
+            c.setConnectTimeout(7000);
+            c.setReadTimeout(7000);
+            c.setRequestProperty("Accept", "application/json");
+            if (c.getResponseCode() == 200) {
+              StringBuilder body = new StringBuilder();
+              try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), "UTF-8"))) {
+                String line;
+                while ((line = r.readLine()) != null && body.length() < 500000) body.append(line);
+              }
+              JSONArray raw = new JSONArray(body.toString());
+              for (int i = 0; i < raw.length(); i++) {
+                JSONObject item = raw.optJSONObject(i);
+                if (item == null || !"sponsor".equals(item.optString("category"))) continue;
+                JSONArray times = item.optJSONArray("segment");
+                if (times == null || times.length() < 2) continue;
+                double start = times.optDouble(0, -1), end = times.optDouble(1, -1);
+                if (Double.isFinite(start) && Double.isFinite(end) && start >= 0 && end > start) {
+                  JSONObject seg = new JSONObject();
+                  seg.put("start", start); seg.put("end", end); seg.put("category", "sponsor");
+                  valid.put(seg);
+                }
+              }
+            }
+          } catch (Exception ignored) {
+          } finally { if (c != null) c.disconnect(); }
+          final String data = valid.toString();
+          runOnUiThread(new Runnable() {
+            public void run() {
+              if (yw != null && ywReady) {
+                yw.evaluateJavascript("window.sbSetSegments&&sbSetSegments(" + JSONObject.quote(videoId) + "," + data + ")", null);
+              }
+            }
+          });
+        }
+      }, "SponsorBlock-query").start();
+    }
+  }
+
   class Br {
-    @JavascriptInterface public void openYouTube(final String q) {
+    @JavascriptInterface public void ytShow(final int x, final int y, final int wd, final int ht) {
       runOnUiThread(new Runnable() { public void run() {
-        Intent i = new Intent(MainActivity.this, YouTubeActivity.class);
-        if (q != null && !q.trim().isEmpty()) i.putExtra("q", q.trim());
-        startActivity(i);
+        ensureYw();
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Math.max(wd, 1), Math.max(ht, 1));
+        lp.leftMargin = Math.max(x, 0); lp.topMargin = Math.max(y, 0);
+        yw.setLayoutParams(lp);
+        yw.setVisibility(View.VISIBLE);
+      } });
+    }
+    @JavascriptInterface public void ytHide() {
+      runOnUiThread(new Runnable() { public void run() {
+        if (yw == null) return;
+        if (ywReady) ywEval("{\"c\":\"stop\"}");
+        ywPending = null;
+        yw.setVisibility(View.GONE);
+      } });
+    }
+    @JavascriptInterface public void ytCmd(final String json) {
+      if (json == null || json.length() > 500) return;
+      runOnUiThread(new Runnable() { public void run() {
+        try {
+          JSONObject o = new JSONObject(json);
+          String c = o.optString("c");
+          if (!(c.equals("load") || c.equals("play") || c.equals("pause") || c.equals("seek") || c.equals("rate") || c.equals("stop"))) return;
+          if (c.equals("load") && !o.optString("id").matches("[A-Za-z0-9_-]{6,20}")) return;
+          ensureYw();
+          if (ywReady) ywEval(json); else if (c.equals("load")) ywPending = json;
+        } catch (Exception e) {}
       } });
     }
     @JavascriptInterface public String getAuthState() { return authStateJson().toString(); }
