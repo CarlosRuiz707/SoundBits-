@@ -38,7 +38,7 @@ preBuild.dependsOn 'arrange'
 android {
     namespace 'app.tunebox'
     compileSdk 35
-    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 13; versionName "2.1.1" }
+    defaultConfig { applicationId "app.tunebox"; minSdk 24; targetSdk 34; versionCode 15; versionName "2.2.1" }
     sourceSets { main { res.srcDir genRes; java.srcDir genJava } }
     signingConfigs {
         debug {
