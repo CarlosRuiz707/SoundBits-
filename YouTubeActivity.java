@@ -6,12 +6,14 @@ import android.content.res.ColorStateList;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.PowerManager;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -27,12 +29,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.net.URLEncoder;
 
-/* YouTube móvil dentro de Tunebox: barra de búsqueda arriba (estilo Brave) y controles abajo.
-   Este WebView NO tiene el puente "Android" de la app. Solo expone "TBSB", un puente mínimo de SponsorBlock
-   (consultar segmentos de un ID de vídeo válido y avisar de un salto); la página no puede hacer nada más. */
+/* YouTube Music dentro de SoundBits. Este WebView no expone el puente Android general:
+   TBSB solo consulta SponsorBlock, informa reproducción y mantiene el audio activo en segundo plano. */
 public class YouTubeActivity extends Activity {
-  static final String HOME = "https://m.youtube.com/";
-  static final int BG = 0xFF121212, CARD = 0xFF1F1F1F, TX = 0xFFFFFFFF, MU = 0xFFB3B3B3, AC = 0xFF1ED760;
+  static final String HOME = "https://music.youtube.com/";
+  static final int BG = 0xFF030303, CARD = 0xFF212121, TX = 0xFFFFFFFF, MU = 0xFFAAAAAA, AC = 0xFFFF0000;
 
   WebView web;
   EditText bar;
@@ -42,21 +43,27 @@ public class YouTubeActivity extends Activity {
   View customView;
   WebChromeClient chrome;
   WebChromeClient.CustomViewCallback customCb;
+  PowerManager.WakeLock playbackLock;
+  boolean audioPlaying;
 
-  /* SponsorBlock en YouTube web: busca el ID de vídeo de la página y salta los segmentos de la comunidad */
+  /* SponsorBlock para los reproductores de YouTube y YouTube Music, incluidos cambios SPA. */
   static final String SB_JS = """
 (function(){if(window.__tbSb)return;window.__tbSb=1;
-var vid="",segs=[],last=-1;
-window.__tbSbSet=function(id,a){if(id===vid){segs=a||[];last=-1}};
+var vid="",segs=[],last=-1,lastPlaying=null;
+window.__tbSbSet=function(id,a){if(id===vid){segs=Array.isArray(a)?a:[];last=-1}};
 function cur(){var p=location.pathname;
 if(p.indexOf("/shorts/")===0){var s=p.substr(8,11);return /^[A-Za-z0-9_-]{11}$/.test(s)?s:""}
 var v=new URLSearchParams(location.search).get("v");return v&&/^[A-Za-z0-9_-]{11}$/.test(v)?v:""}
-setInterval(function(){var id=cur();
+function tick(){var id=cur();
 if(id!==vid){vid=id;segs=[];last=-1;if(id){try{TBSB.segments(id)}catch(e){}}}
-var v=document.querySelector("video");if(!v||!segs.length)return;var t=v.currentTime;
+var v=document.querySelector("video");if(!v)return;
+var playing=!v.paused&&!v.ended;
+if(playing!==lastPlaying){lastPlaying=playing;try{TBSB.playback(playing,document.title||"YouTube Music")}catch(e){}}
+if(!segs.length)return;var t=v.currentTime;
 for(var i=0;i<segs.length;i++){var x=segs[i];
 if(t>=x.start&&t<x.end&&last!==i){last=i;v.currentTime=Math.min(x.end+0.15,v.duration||x.end+0.15);
-try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
+try{TBSB.skipped(x.category)}catch(e){}break}}}
+setInterval(tick,500)})();
 """;
 
   class Sb {
@@ -67,13 +74,16 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
         runOnUiThread(new Runnable() { public void run() {
           if (web != null) web.evaluateJavascript("window.__tbSbSet&&__tbSbSet(" + JSONObject.quote(id) + "," + data + ")", null);
         } });
-      } }, "SponsorBlock-yt").start();
+      } }, "SponsorBlock-ytm").start();
     }
     @JavascriptInterface public void skipped(final String cat) {
       if (cat == null || !MainActivity.SB_ALL.contains(cat)) return;
       runOnUiThread(new Runnable() { public void run() {
         Toast.makeText(YouTubeActivity.this, "SponsorBlock: segmento omitido (" + cat + ")", Toast.LENGTH_SHORT).show();
       } });
+    }
+    @JavascriptInterface public void playback(final boolean playing, final String title) {
+      runOnUiThread(new Runnable() { public void run() { setAudioPlaying(playing); } });
     }
   }
 
@@ -85,7 +95,7 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
     return h.equals("youtu.be") || h.equals("youtube.com") || h.endsWith(".youtube.com");
   }
 
-  /* YouTube y las páginas de consentimiento/cuenta de Google se quedan dentro; lo demás abre fuera. */
+  /* YouTube Music, YouTube y los flujos de consentimiento/cuenta Google permanecen dentro. */
   static boolean okHost(String h) {
     if (ytHost(h)) return true;
     if (h == null) return false;
@@ -98,6 +108,13 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
     getWindow().setStatusBarColor(BG);
     getWindow().setNavigationBarColor(BG);
     PlayService.cmd("pause"); // evita dos audios a la vez
+    try {
+      PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
+      if (pm != null) {
+        playbackLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, getPackageName() + ":YouTubeMusicPlayback");
+        playbackLock.setReferenceCounted(false);
+      }
+    } catch (Exception ignored) {}
 
     root = new FrameLayout(this);
     root.setBackgroundColor(BG);
@@ -110,15 +127,22 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
       return ins;
     });
 
-    // Barra de búsqueda
+    // Barra de búsqueda compacta, con la paleta negra y roja de YouTube Music.
     LinearLayout top = new LinearLayout(this);
     top.setOrientation(LinearLayout.HORIZONTAL);
     top.setGravity(Gravity.CENTER_VERTICAL);
-    top.setPadding(dp(10), dp(8), dp(10), dp(8));
+    top.setPadding(dp(14), dp(8), dp(14), dp(8));
     top.setBackgroundColor(BG);
+    TextView brand = new TextView(this);
+    brand.setText("▶");
+    brand.setTextColor(AC);
+    brand.setTextSize(20);
+    brand.setGravity(Gravity.CENTER);
+    brand.setPadding(0, 0, dp(10), 0);
+    top.addView(brand, new LinearLayout.LayoutParams(dp(30), dp(42)));
     bar = new EditText(this);
     bar.setSingleLine(true);
-    bar.setHint("Buscar en YouTube");
+    bar.setHint("Buscar en YouTube Music");
     bar.setHintTextColor(MU);
     bar.setTextColor(TX);
     bar.setTextSize(15);
@@ -140,14 +164,13 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
     top.addView(bar, new LinearLayout.LayoutParams(0, -2, 1f));
     page.addView(top, new LinearLayout.LayoutParams(-1, -2));
 
-    // Progreso de carga
     prog = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
     prog.setMax(100);
     prog.setProgressTintList(ColorStateList.valueOf(AC));
     prog.setVisibility(View.INVISIBLE);
     page.addView(prog, new LinearLayout.LayoutParams(-1, dp(2)));
 
-    // WebView sin puente JavaScript hacia la app
+    // WebView aislado: el puente TBSB solo ofrece SponsorBlock y estado de reproducción.
     web = new WebView(this);
     web.setBackgroundColor(BG);
     WebSettings s = web.getSettings();
@@ -158,6 +181,7 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
     s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
     s.setSupportZoom(false);
     s.setBuiltInZoomControls(false);
+    s.setMediaPlaybackRequiresUserGesture(false);
     web.addJavascriptInterface(new Sb(), "TBSB");
     CookieManager cm = CookieManager.getInstance();
     cm.setAcceptCookie(true);
@@ -205,15 +229,16 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
     web.setWebChromeClient(chrome);
     page.addView(web, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-    // Controles inferiores
+    // Barra inferior de navegación del reproductor.
     LinearLayout nav = new LinearLayout(this);
     nav.setOrientation(LinearLayout.HORIZONTAL);
+    nav.setGravity(Gravity.CENTER_VERTICAL);
     nav.setBackgroundColor(BG);
     nav.addView(btn("Atrás", v -> { if (web.canGoBack()) web.goBack(); }));
     nav.addView(btn("Adelante", v -> { if (web.canGoForward()) web.goForward(); }));
     nav.addView(btn("Recargar", v -> web.reload()));
     nav.addView(btn("Inicio", v -> web.loadUrl(HOME)));
-    nav.addView(btn("Tunebox", v -> finish()));
+    nav.addView(btn("SoundBits", v -> finish()));
     page.addView(nav, new LinearLayout.LayoutParams(-1, -2));
 
     setContentView(root);
@@ -226,11 +251,20 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
     }
   }
 
+  void setAudioPlaying(boolean playing) {
+    audioPlaying = playing;
+    try {
+      if (playbackLock == null) return;
+      if (playing && !playbackLock.isHeld()) playbackLock.acquire();
+      else if (!playing && playbackLock.isHeld()) playbackLock.release();
+    } catch (Exception ignored) {}
+  }
+
   TextView btn(String label, View.OnClickListener l) {
     TextView t = new TextView(this);
     t.setText(label);
     t.setTextColor(MU);
-    t.setTextSize(13);
+    t.setTextSize(12);
     t.setGravity(Gravity.CENTER);
     t.setPadding(0, dp(14), 0, dp(14));
     t.setOnClickListener(l);
@@ -238,7 +272,7 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
     return t;
   }
 
-  /* Texto → búsqueda en YouTube; si es un enlace de YouTube, se abre tal cual. */
+  /* Texto → búsqueda de YouTube Music; enlaces de YouTube/YouTube Music se abren tal cual. */
   void go(String input) {
     String t = input == null ? "" : input.trim();
     if (t.isEmpty()) return;
@@ -248,7 +282,7 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
       if (ytHost(u.getHost())) url = u.buildUpon().scheme("https").build().toString();
     }
     if (url == null) {
-      try { url = HOME + "results?search_query=" + URLEncoder.encode(t, "UTF-8"); } catch (Exception e) { return; }
+      try { url = HOME + "search?q=" + URLEncoder.encode(t, "UTF-8"); } catch (Exception e) { return; }
     }
     web.loadUrl(url);
     bar.clearFocus();
@@ -259,7 +293,7 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
   void showUrl(String url) {
     if (bar == null || bar.hasFocus() || url == null) return;
     Uri u = Uri.parse(url);
-    String q = u.getQueryParameter("search_query");
+    String q = u.getQueryParameter("q");
     bar.setText(q != null ? q : (u.getHost() == null ? "" : u.getHost()));
   }
 
@@ -274,7 +308,9 @@ try{TBSB.skipped(x.category)}catch(e){}break}}},500)})();
   }
 
   protected void onDestroy() {
+    setAudioPlaying(false);
     if (web != null) { root.removeView(web); web.destroy(); web = null; }
+    try { if (playbackLock != null && playbackLock.isHeld()) playbackLock.release(); } catch (Exception ignored) {}
     super.onDestroy();
   }
 }
