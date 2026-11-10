@@ -1,8 +1,11 @@
 package app.tunebox;
 
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -10,6 +13,7 @@ import android.os.PowerManager;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
@@ -21,19 +25,19 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import java.net.URLEncoder;
 
-/* YouTube Music dentro de SoundBits. Este WebView no expone el puente Android general:
-   TBSB solo consulta SponsorBlock, informa reproducción y mantiene el audio activo en segundo plano. */
+/* YouTube Music en SoundBits: página de inicio oficial, barra inferior de SoundBits y
+   puente mínimo exclusivo para SponsorBlock/estado del reproductor. */
 public class YouTubeActivity extends Activity {
   static final String HOME = "https://music.youtube.com/";
-  static final int BG = 0xFF030303, CARD = 0xFF212121, TX = 0xFFFFFFFF, MU = 0xFFAAAAAA, AC = 0xFFFF0000;
+  static final int BG = 0xFF030303, CARD = 0xFF212121, TX = 0xFFFFFFFF, MU = 0xFFAAAAAA, AC = 0xFFFF6A1A;
 
   WebView web;
   EditText bar;
@@ -44,7 +48,7 @@ public class YouTubeActivity extends Activity {
   WebChromeClient chrome;
   WebChromeClient.CustomViewCallback customCb;
   PowerManager.WakeLock playbackLock;
-  boolean audioPlaying;
+  View splash;
 
   /* SponsorBlock para los reproductores de YouTube y YouTube Music, incluidos cambios SPA. */
   static final String SB_JS = """
@@ -95,7 +99,6 @@ setInterval(tick,500)})();
     return h.equals("youtu.be") || h.equals("youtube.com") || h.endsWith(".youtube.com");
   }
 
-  /* YouTube Music, YouTube y los flujos de consentimiento/cuenta Google permanecen dentro. */
   static boolean okHost(String h) {
     if (ytHost(h)) return true;
     if (h == null) return false;
@@ -127,7 +130,7 @@ setInterval(tick,500)})();
       return ins;
     });
 
-    // Barra de búsqueda compacta, con la paleta negra y roja de YouTube Music.
+    // Búsqueda rápida con paleta YT Music y marca SoundBits.
     LinearLayout top = new LinearLayout(this);
     top.setOrientation(LinearLayout.HORIZONTAL);
     top.setGravity(Gravity.CENTER_VERTICAL);
@@ -170,7 +173,6 @@ setInterval(tick,500)})();
     prog.setVisibility(View.INVISIBLE);
     page.addView(prog, new LinearLayout.LayoutParams(-1, dp(2)));
 
-    // WebView aislado: el puente TBSB solo ofrece SponsorBlock y estado de reproducción.
     web = new WebView(this);
     web.setBackgroundColor(BG);
     WebSettings s = web.getSettings();
@@ -200,6 +202,7 @@ setInterval(tick,500)})();
       public void onPageFinished(WebView v, String url) {
         Uri u = Uri.parse(url == null ? "" : url);
         if ("https".equals(u.getScheme()) && ytHost(u.getHost())) v.evaluateJavascript(SB_JS, null);
+        if (splash != null) hideSplash();
       }
     });
     chrome = new WebChromeClient() {
@@ -228,21 +231,10 @@ setInterval(tick,500)})();
     };
     web.setWebChromeClient(chrome);
     page.addView(web, new LinearLayout.LayoutParams(-1, 0, 1f));
-
-    // Barra inferior de navegación del reproductor.
-    LinearLayout nav = new LinearLayout(this);
-    nav.setOrientation(LinearLayout.HORIZONTAL);
-    nav.setGravity(Gravity.CENTER_VERTICAL);
-    nav.setBackgroundColor(BG);
-    nav.addView(btn("Atrás", v -> { if (web.canGoBack()) web.goBack(); }));
-    nav.addView(btn("Adelante", v -> { if (web.canGoForward()) web.goForward(); }));
-    nav.addView(btn("Recargar", v -> web.reload()));
-    nav.addView(btn("Inicio", v -> web.loadUrl(HOME)));
-    nav.addView(btn("SoundBits", v -> finish()));
-    page.addView(nav, new LinearLayout.LayoutParams(-1, -2));
+    page.addView(soundBitsNav(), new LinearLayout.LayoutParams(-1, dp(60)));
 
     setContentView(root);
-
+    showIconSplash();
     if (saved != null) {
       web.restoreState(saved);
     } else {
@@ -251,8 +243,101 @@ setInterval(tick,500)})();
     }
   }
 
+  /* Barra inferior de SoundBits, con accesos para Inicio, YouTube Music y sus secciones. */
+  View soundBitsNav() {
+    LinearLayout nav = new LinearLayout(this);
+    nav.setOrientation(LinearLayout.HORIZONTAL);
+    nav.setGravity(Gravity.CENTER);
+    nav.setBackgroundColor(BG);
+    nav.setPadding(0, dp(5), 0, dp(3));
+    nav.setElevation(dp(8));
+    nav.addView(navItem("⌂", "Inicio", v -> finish()));
+    nav.addView(navItem("▶", "YouTube Music", v -> web.loadUrl(HOME)));
+    nav.addView(navItem("⌕", "Explorar", v -> web.loadUrl(HOME + "explore")));
+    nav.addView(navItem("♫", "Podcast", v -> web.loadUrl(HOME + "podcasts")));
+    nav.addView(navItem("▤", "Biblioteca", v -> web.loadUrl(HOME + "library")));
+    return nav;
+  }
+
+  View navItem(String icon, String label, View.OnClickListener listener) {
+    LinearLayout item = new LinearLayout(this);
+    item.setOrientation(LinearLayout.VERTICAL);
+    item.setGravity(Gravity.CENTER);
+    item.setClickable(true);
+    item.setFocusable(true);
+    item.setOnClickListener(listener);
+    TextView glyph = new TextView(this);
+    glyph.setText(icon);
+    glyph.setTextColor(TX);
+    glyph.setGravity(Gravity.CENTER);
+    glyph.setTextSize(22);
+    item.addView(glyph, new LinearLayout.LayoutParams(-1, dp(30)));
+    TextView text = new TextView(this);
+    text.setText(label);
+    text.setTextColor(MU);
+    text.setGravity(Gravity.CENTER);
+    text.setTextSize(9);
+    text.setSingleLine(true);
+    item.addView(text, new LinearLayout.LayoutParams(-1, dp(16)));
+    item.setLayoutParams(new LinearLayout.LayoutParams(0, -1, 1f));
+    return item;
+  }
+
+  /* Animación de entrada inspirada en el icono: triángulo naranja, vinilo giratorio y nota. */
+  void showIconSplash() {
+    FrameLayout overlay = new FrameLayout(this);
+    overlay.setBackgroundColor(Color.BLACK);
+    FrameLayout.LayoutParams outer = new FrameLayout.LayoutParams(dp(150), dp(150), Gravity.CENTER);
+    GradientDrawable orange = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+        new int[]{0xFFFF7A1A, 0xFFFF3B12, 0xFFD91E18});
+    orange.setShape(GradientDrawable.RECTANGLE);
+    orange.setCornerRadius(dp(24));
+    View triangle = new View(this);
+    triangle.setBackground(orange);
+    FrameLayout.LayoutParams tri = new FrameLayout.LayoutParams(dp(126), dp(126), Gravity.CENTER);
+    triangle.setRotation(45f);
+    overlay.addView(triangle, tri);
+
+    ImageView logo = new ImageView(this);
+    logo.setImageResource(R.drawable.ic_launcher);
+    logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+    FrameLayout.LayoutParams icon = new FrameLayout.LayoutParams(dp(116), dp(116), Gravity.CENTER);
+    overlay.addView(logo, icon);
+
+    TextView word = new TextView(this);
+    word.setText("SoundBits");
+    word.setTextColor(TX);
+    word.setTextSize(22);
+    word.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
+    word.setGravity(Gravity.CENTER);
+    FrameLayout.LayoutParams wordLp = new FrameLayout.LayoutParams(-1, dp(40), Gravity.CENTER_HORIZONTAL | Gravity.CENTER_VERTICAL);
+    wordLp.topMargin = dp(118);
+    overlay.addView(word, wordLp);
+    overlay.setAlpha(0f);
+    root.addView(overlay, outer);
+    splash = overlay;
+
+    AnimatorSet entrance = new AnimatorSet();
+    entrance.playTogether(
+        ObjectAnimator.ofFloat(overlay, View.ALPHA, 0f, 1f),
+        ObjectAnimator.ofFloat(logo, View.SCALE_X, .72f, 1f),
+        ObjectAnimator.ofFloat(logo, View.SCALE_Y, .72f, 1f),
+        ObjectAnimator.ofFloat(triangle, View.ROTATION, 20f, 45f));
+    entrance.setDuration(650);
+    entrance.setInterpolator(new AccelerateDecelerateInterpolator());
+    entrance.start();
+  }
+
+  void hideSplash() {
+    final View old = splash;
+    if (old == null) return;
+    splash = null;
+    old.animate().alpha(0f).setDuration(320).withEndAction(new Runnable() {
+      public void run() { if (root != null) root.removeView(old); }
+    }).start();
+  }
+
   void setAudioPlaying(boolean playing) {
-    audioPlaying = playing;
     try {
       if (playbackLock == null) return;
       if (playing && !playbackLock.isHeld()) playbackLock.acquire();
@@ -260,19 +345,7 @@ setInterval(tick,500)})();
     } catch (Exception ignored) {}
   }
 
-  TextView btn(String label, View.OnClickListener l) {
-    TextView t = new TextView(this);
-    t.setText(label);
-    t.setTextColor(MU);
-    t.setTextSize(12);
-    t.setGravity(Gravity.CENTER);
-    t.setPadding(0, dp(14), 0, dp(14));
-    t.setOnClickListener(l);
-    t.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
-    return t;
-  }
-
-  /* Texto → búsqueda de YouTube Music; enlaces de YouTube/YouTube Music se abren tal cual. */
+  /* Texto → búsqueda de YouTube Music; los enlaces YouTube se abren tal cual. */
   void go(String input) {
     String t = input == null ? "" : input.trim();
     if (t.isEmpty()) return;
