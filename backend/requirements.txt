@@ -1,2 +1,5 @@
-Flask==3.0.3
-ytmusicapi==1.10.3
+fastapi>=0.115
+uvicorn[standard]>=0.30
+yt-dlp
+ytmusicapi>=1.8
+cachetools>=5.3
